@@ -1,0 +1,61 @@
+{
+  "name": "Collectr â Tu ColecciÃ³n Digital",
+  "short_name": "Collectr",
+  "description": "Cataloga tu colecciÃ³n de videojuegos, pelÃ­culas, libros, cÃ³mics y mÃ¡s. Escanea cÃ³digos de barras y portadas con IA.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0e0e12",
+  "theme_color": "#7c6af7",
+  "lang": "es",
+  "dir": "ltr",
+  "categories": ["entertainment", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "screenshots/desktop.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Vista de colecciÃ³n en escritorio"
+    },
+    {
+      "src": "screenshots/mobile.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Vista de colecciÃ³n en mÃ³vil"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "AÃ±adir Ã­tem",
+      "short_name": "AÃ±adir",
+      "description": "Escanea un nuevo Ã­tem",
+      "url": "/?action=scan",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Mi colecciÃ³n",
+      "short_name": "ColecciÃ³n",
+      "description": "Ver toda tu colecciÃ³n",
+      "url": "/",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false
+}

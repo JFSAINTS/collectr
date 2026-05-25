@@ -1,0 +1,16 @@
+# Backup files (redundant once git tracks history)
+files/
+files.zip
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+
+# Editor
+.vscode/
+*.swp
+*.swo

@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0e0e12">
+  <meta name="description" content="Collectr — Cataloga tu colección de videojuegos, películas, libros y más">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Collectr">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <title>Collectr</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- AUTH SCREEN -->
+<div id="auth-screen" class="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <i class="ti ti-stack-2"></i>
+      <span>Collectr</span>
+    </div>
+    <p class="auth-tagline">Tu colección. Siempre contigo.</p>
+    <div class="auth-desc">Cataloga videojuegos, películas, libros, cómics y más. Sincronizado en la nube, disponible offline.</div>
+    <div class="auth-buttons">
+      <button class="auth-btn guest" onclick="signInAsGuest()">
+        <i class="ti ti-device-laptop"></i>
+        Continuar sin cuenta — guardar en este dispositivo
+      </button>
+      <div class="auth-divider"><span>o inicia sesión con</span></div>
+      <button class="auth-btn google auth-btn-secondary" onclick="signInWithGoogle()">
+        <svg width="16" height="16" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z" fill="#34A853"/><path d="M3.964 10.71c-.18-.54-.282-1.117-.282-1.71s.102-1.17.282-1.71V4.958H.957C.347 6.173 0 7.548 0 9s.347 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>
+        Google
+      </button>
+      <button class="auth-btn facebook auth-btn-secondary" onclick="signInWithFacebook()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff" xmlns="http://www.w3.org/2000/svg"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+        Facebook
+      </button>
+    </div>
+    <p class="auth-note">Al continuar aceptas los <a href="#">Términos de servicio</a>. En modo local, tus datos se guardan solo en este dispositivo.</p>
+  </div>
+</div>
+
+<!-- APP SHELL -->
+<div id="app" style="display:none">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <i class="ti ti-stack-2"></i>
+      <div>Collectr<span id="sidebar-username">Mi Colección</span></div>
+    </div>
+    <div class="sidebar-sync online" id="sync-status">
+      <span class="sync-dot"></span><span>Sincronizado</span>
+    </div>
+
+    <div class="nav-section">Colección</div>
+    <div class="nav-item active" data-page="collection" onclick="showPage('collection',this)">
+      <i class="ti ti-layout-grid"></i> Todos los ítems
+      <span class="nav-badge" id="total-badge">0</span>
+    </div>
+    <div class="nav-item" data-page="categories" onclick="showPage('categories',this)">
+      <i class="ti ti-category"></i> Categorías
+    </div>
+    <div class="nav-item" data-page="wishlist" onclick="showPage('wishlist',this)">
+      <i class="ti ti-heart"></i> Lista de deseos
+      <span class="nav-badge wishlist-badge" id="wish-badge" style="display:none">0</span>
+    </div>
+    <div class="nav-item" data-page="stats" onclick="showPage('stats',this)">
+      <i class="ti ti-chart-bar"></i> Estadísticas
+    </div>
+
+    <div class="nav-section">Herramientas</div>
+    <div class="nav-item" onclick="openScannerModal()">
+      <i class="ti ti-scan"></i> Escanear / Añadir
+    </div>
+    <div class="nav-item" onclick="openImportModal()">
+      <i class="ti ti-upload"></i> Importar
+    </div>
+    <div class="nav-item" onclick="openExportModal()">
+      <i class="ti ti-download"></i> Exportar
+    </div>
+
+    <div class="sidebar-bottom">
+      <div class="user-card" id="user-card">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <div style="flex:1;min-width:0">
+          <div class="user-name" id="user-display-name">Invitado</div>
+          <div class="user-sub" id="user-email">Sin cuenta</div>
+        </div>
+      </div>
+      <button class="logout-btn" onclick="signOut()">
+        <i class="ti ti-logout"></i> Cerrar sesión
+      </button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="topbar">
+      <button class="btn-icon mobile-menu" onclick="toggleSidebar()" aria-label="Menú">
+        <i class="ti ti-menu-2"></i>
+      </button>
+      <div class="topbar-title" id="page-title">Mi Colección</div>
+      <div class="search-box">
+        <i class="ti ti-search" aria-hidden="true"></i>
+        <input type="text" placeholder="Buscar..." id="search-input" oninput="filterItems()" autocomplete="off">
+        <button class="btn-icon" id="search-clear" onclick="clearSearch()" style="display:none" aria-label="Borrar búsqueda"><i class="ti ti-x"></i></button>
+      </div>
+      <button class="btn btn-primary" onclick="openScannerModal()">
+        <i class="ti ti-plus"></i><span class="btn-label"> Añadir</span>
+      </button>
+    </div>
+
+    <!-- PAGES -->
+    <div class="content" id="page-collection">
+      <div class="stats-grid" id="stats-grid">
+        <div class="stat-card"><div class="stat-val" id="st-total">0</div><div class="stat-label">Total</div></div>
+        <div class="stat-card"><div class="stat-val" id="st-games">0</div><div class="stat-label">Videojuegos</div></div>
+        <div class="stat-card"><div class="stat-val" id="st-movies">0</div><div class="stat-label">Películas</div></div>
+        <div class="stat-card"><div class="stat-val" id="st-books">0</div><div class="stat-label">Libros/Cómics</div></div>
+      </div>
+      <div class="view-controls">
+        <div class="view-toggle">
+          <button class="view-btn active" id="btn-grid" onclick="setView('grid')" aria-label="Vista cuadrícula"><i class="ti ti-layout-grid"></i></button>
+          <button class="view-btn" id="btn-list" onclick="setView('list')" aria-label="Vista lista"><i class="ti ti-list"></i></button>
+        </div>
+        <select class="filter-select" id="cat-filter" onchange="filterItems()">
+          <option value="">Todas</option>
+          <option value="game">Videojuegos</option>
+          <option value="movie">Películas</option>
+          <option value="dvd">DVD</option>
+          <option value="bluray">Blu-ray</option>
+          <option value="book">Libros</option>
+          <option value="comic">Cómics</option>
+          <option value="music">Música</option>
+          <option value="other">Otros</option>
+        </select>
+        <select class="filter-select" id="sort-select" onchange="filterItems()">
+          <option value="date-desc">Más recientes</option>
+          <option value="date-asc">Más antiguos</option>
+          <option value="name-asc">A → Z</option>
+          <option value="name-desc">Z → A</option>
+          <option value="rating-desc">Mejor valorados</option>
+        </select>
+        <span class="count-badge" id="showing-count"></span>
+      </div>
+      <div id="items-container"></div>
+    </div>
+
+    <div class="content" id="page-categories" style="display:none">
+      <div class="cat-grid" id="cat-grid"></div>
+    </div>
+
+    <div class="content" id="page-wishlist" style="display:none">
+      <div id="wishlist-container"></div>
+    </div>
+
+    <div class="content" id="page-stats" style="display:none">
+      <div id="stats-container"></div>
+    </div>
+  </div>
+</div>
+
+<!-- SIDEBAR OVERLAY (mobile) -->
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+<!-- SCANNER MODAL -->
+<div class="modal-overlay" id="scanner-modal" style="display:none" onclick="closeScannerOnOverlay(event)">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">Añadir a la colección</div>
+        <div class="modal-sub">Escanea, sube imagen o añade manualmente</div>
+      </div>
+      <button class="btn-icon" onclick="closeScannerModal()" aria-label="Cerrar"><i class="ti ti-x"></i></button>
+    </div>
+
+    <div class="scanner-tabs">
+      <button class="scanner-tab active" id="tab-camera" onclick="switchScanTab('camera')"><i class="ti ti-camera"></i> Cámara</button>
+      <button class="scanner-tab" id="tab-image" onclick="switchScanTab('image')"><i class="ti ti-photo"></i> Imagen</button>
+      <button class="scanner-tab" id="tab-manual" onclick="switchScanTab('manual')"><i class="ti ti-pencil"></i> Manual</button>
+    </div>
+
+    <!-- CAMERA -->
+    <div id="scan-panel-camera">
+      <div class="camera-box" id="camera-box" onclick="startCamera()">
+        <div class="camera-placeholder" id="cam-placeholder">
+          <i class="ti ti-camera" style="font-size:2.5rem" aria-hidden="true"></i>
+          <span>Toca para activar la cámara</span>
+          <small>Apunta al código de barras o portada</small>
+        </div>
+        <video id="camera-video" autoplay playsinline muted style="display:none"></video>
+        <canvas id="camera-canvas" style="display:none"></canvas>
+        <div class="camera-overlay" id="scan-overlay" style="display:none">
+          <div class="scan-frame"><div class="scan-line"></div></div>
+        </div>
+      </div>
+      <div class="cam-controls">
+        <button class="btn btn-primary" id="start-cam-btn" onclick="startCamera()"><i class="ti ti-camera"></i> Activar cámara</button>
+        <button class="btn btn-ghost" id="stop-cam-btn" onclick="stopCamera()" style="display:none"><i class="ti ti-camera-off"></i> Detener</button>
+        <button class="btn btn-primary" id="capture-btn" onclick="captureFrame()" style="display:none"><i class="ti ti-camera-rotate"></i> Capturar</button>
+        <select class="filter-select" id="camera-select" style="display:none" onchange="switchCamera()"></select>
+      </div>
+      <div id="camera-status"></div>
+    </div>
+
+    <!-- IMAGE -->
+    <div id="scan-panel-image" style="display:none">
+      <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()"
+           ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="dropFile(event)">
+        <i class="ti ti-cloud-upload" style="font-size:2.5rem" aria-hidden="true"></i>
+        <p>Arrastra una imagen aquí o toca para seleccionar</p>
+        <small>Portada, código de barras, foto del producto...</small>
+        <input type="file" id="file-input" accept="image/*" onchange="handleFileSelect(event)" capture="environment">
+      </div>
+      <img id="image-preview" style="display:none;width:100%;max-height:220px;object-fit:contain;border-radius:8px;margin-top:0.75rem" alt="Vista previa">
+      <div id="image-status"></div>
+    </div>
+
+    <!-- MANUAL -->
+    <div id="scan-panel-manual" style="display:none">
+      <div class="form-grid">
+        <div class="form-group full">
+          <label class="form-label">Nombre / Título <span style="color:var(--danger)">*</span></label>
+          <input type="text" class="form-input" id="m-name" placeholder="Ej: The Last of Us Part II">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Categoría <span style="color:var(--danger)">*</span></label>
+          <select class="form-select" id="m-cat">
+            <option value="game">Videojuego</option>
+            <option value="movie">Película</option>
+            <option value="dvd">DVD</option>
+            <option value="bluray">Blu-ray</option>
+            <option value="book">Libro</option>
+            <option value="comic">Cómic</option>
+            <option value="music">Música</option>
+            <option value="other">Otro</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Estado</label>
+          <select class="form-select" id="m-wishlist">
+            <option value="no">Lo tengo</option>
+            <option value="yes">Lo quiero (wishlist)</option>
+          </select>
+        </div>
+      </div>
+      <div class="extra-fields-toggle" id="extra-toggle" onclick="toggleExtraFields()">
+        <i class="ti ti-chevron-down" id="extra-toggle-icon"></i>
+        Más detalles (plataforma, año, editorial...)
+      </div>
+      <div class="form-grid extra-fields-hidden" id="extra-fields-panel">
+        <div class="form-group">
+          <label class="form-label">Año</label>
+          <input type="number" class="form-input" id="m-year" placeholder="2024" min="1900" max="2099">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Plataforma / Soporte</label>
+          <input type="text" class="form-input" id="m-platform" placeholder="PS5, Switch, Blu-ray...">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Editor / Estudio</label>
+          <input type="text" class="form-input" id="m-publisher" placeholder="Sony, Nintendo...">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Género(s)</label>
+          <input type="text" class="form-input" id="m-genre" placeholder="Acción, RPG, Thriller...">
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Notas personales</label>
+          <textarea class="form-textarea" id="m-notes" placeholder="Edición especial, estado del disco..."></textarea>
+        </div>
+        <div class="form-group full">
+          <label class="form-label">URL de portada (opcional)</label>
+          <input type="url" class="form-input" id="m-cover" placeholder="https://..." oninput="previewManualCover()">
+          <img id="m-cover-preview" style="width:60px;border-radius:4px;margin-top:6px;display:none" alt="Portada">
+        </div>
+        <div class="form-group full">
+          <label class="form-label">ISBN / Código de barras</label>
+          <input type="text" class="form-input" id="m-barcode" placeholder="978...">
+        </div>
+      </div>
+    </div>
+
+    <!-- RESULT PREVIEW -->
+    <div id="scan-result" style="display:none">
+      <div class="result-header">
+        <i class="ti ti-sparkles" style="color:var(--accent2)" aria-hidden="true"></i>
+        Ítem detectado — revisa y edita antes de guardar
+      </div>
+      <div class="form-grid">
+        <div class="form-group full">
+          <label class="form-label">Nombre / Título</label>
+          <input type="text" class="form-input" id="r-name">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Categoría</label>
+          <select class="form-select" id="r-cat">
+            <option value="game">Videojuego</option><option value="movie">Película</option>
+            <option value="dvd">DVD</option><option value="bluray">Blu-ray</option>
+            <option value="book">Libro</option><option value="comic">Cómic</option>
+            <option value="music">Música</option><option value="other">Otro</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Año</label>
+          <input type="text" class="form-input" id="r-year">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Plataforma / Soporte</label>
+          <input type="text" class="form-input" id="r-platform">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Editor / Estudio</label>
+          <input type="text" class="form-input" id="r-publisher">
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Género(s)</label>
+          <input type="text" class="form-input" id="r-genre">
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Descripción</label>
+          <textarea class="form-textarea" id="r-desc"></textarea>
+        </div>
+        <div class="form-group full">
+          <label class="form-label">URL portada</label>
+          <input type="url" class="form-input" id="r-cover" oninput="previewResultCover()">
+          <img id="r-cover-preview" style="width:60px;border-radius:4px;margin-top:6px;display:none" alt="Portada">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Código de barras</label>
+          <input type="text" class="form-input" id="r-barcode" readonly>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Estado</label>
+          <select class="form-select" id="r-wishlist">
+            <option value="no">Lo tengo</option>
+            <option value="yes">Lo quiero (wishlist)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeScannerModal()"><i class="ti ti-x"></i> Cancelar</button>
+      <button class="btn btn-primary" id="add-btn" onclick="addItemFromModal()"><i class="ti ti-check"></i> Guardar en colección</button>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL MODAL -->
+<div class="modal-overlay" id="detail-modal" style="display:none" onclick="closeDetailOnOverlay(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="detail-title">Detalle</div>
+      <button class="btn-icon" onclick="closeDetailModal()" aria-label="Cerrar"><i class="ti ti-x"></i></button>
+    </div>
+    <div id="detail-content"></div>
+  </div>
+</div>
+
+<!-- EXPORT MODAL -->
+<div class="modal-overlay" id="export-modal" style="display:none" onclick="closeModalOnOverlay(event,'export-modal')">
+  <div class="modal">
+    <div class="modal-header">
+      <div><div class="modal-title">Exportar colección</div><div class="modal-sub">Descarga tu colección completa</div></div>
+      <button class="btn-icon" onclick="closeExportModal()" aria-label="Cerrar"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="export-options">
+      <div class="export-option" onclick="exportJSON()">
+        <span class="export-icon"><i class="ti ti-file-code" aria-hidden="true"></i></span>
+        <div><div class="export-label">JSON</div><div class="export-desc">Formato completo. Importable de nuevo en Collectr.</div></div>
+        <i class="ti ti-chevron-right" aria-hidden="true"></i>
+      </div>
+      <div class="export-option" onclick="exportCSV()">
+        <span class="export-icon"><i class="ti ti-file-spreadsheet" aria-hidden="true"></i></span>
+        <div><div class="export-label">CSV</div><div class="export-desc">Compatible con Excel, Google Sheets, Numbers.</div></div>
+        <i class="ti ti-chevron-right" aria-hidden="true"></i>
+      </div>
+      <div class="export-option" onclick="exportHTML()">
+        <span class="export-icon"><i class="ti ti-file-type-html" aria-hidden="true"></i></span>
+        <div><div class="export-label">HTML Visual</div><div class="export-desc">Página con portadas para compartir o imprimir.</div></div>
+        <i class="ti ti-chevron-right" aria-hidden="true"></i>
+      </div>
+    </div>
+    <div class="info-box">
+      <i class="ti ti-info-circle" aria-hidden="true"></i>
+      La exportación incluye fecha, hora y <strong id="export-count">0</strong> ítems.
+    </div>
+  </div>
+</div>
+
+<!-- IMPORT MODAL -->
+<div class="modal-overlay" id="import-modal" style="display:none" onclick="closeModalOnOverlay(event,'import-modal')">
+  <div class="modal">
+    <div class="modal-header">
+      <div><div class="modal-title">Importar colección</div><div class="modal-sub">Importa desde un archivo JSON o CSV</div></div>
+      <button class="btn-icon" onclick="closeImportModal()" aria-label="Cerrar"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="drop-zone" id="import-drop" onclick="document.getElementById('import-file').click()"
+         ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="dropImport(event)">
+      <i class="ti ti-upload" style="font-size:2.5rem" aria-hidden="true"></i>
+      <p>Arrastra tu archivo JSON o CSV aquí</p>
+      <small>Exportado previamente desde Collectr</small>
+      <input type="file" id="import-file" accept=".json,.csv" onchange="handleImport(event)" style="display:none">
+    </div>
+    <div id="import-status"></div>
+    <div class="info-box" style="margin-top:1rem">
+      <i class="ti ti-alert-triangle" aria-hidden="true"></i>
+      La importación fusiona los datos con tu colección actual. No se eliminarán ítems existentes.
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast-container" id="toast-container" aria-live="polite"></div>
+
+<!-- INSTALL BANNER -->
+<div class="install-banner" id="install-banner" style="display:none">
+  <i class="ti ti-download" aria-hidden="true"></i>
+  <span>Instala Collectr en tu dispositivo</span>
+  <button class="btn btn-primary btn-sm" onclick="installApp()">Instalar</button>
+  <button class="btn-icon" onclick="dismissInstall()" aria-label="Cerrar"><i class="ti ti-x"></i></button>
+</div>
+
+<!-- Firebase SDK -->
+<script type="module" src="firebase-config.js"></script>
+<script type="module" src="app.js"></script>
+</body>
+</html>

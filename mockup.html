@@ -1,0 +1,1278 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Collectr — Maqueta UX Mejorada</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0e0e12;
+  --bg2: #16161d;
+  --bg3: #1e1e28;
+  --bg4: #26263a;
+  --accent: #7c6af7;
+  --accent2: #a78bfa;
+  --accent3: #c4b5fd;
+  --gold: #f5c842;
+  --text: #e8e8f0;
+  --text2: #9898b0;
+  --text3: #6e6e90;
+  --border: rgba(124,106,247,0.15);
+  --border2: rgba(124,106,247,0.35);
+  --success: #22c55e;
+  --danger: #ef4444;
+  --warn: #f59e0b;
+  --sidebar-w: 240px;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --topbar-h: 60px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;-webkit-font-smoothing:antialiased;}
+
+/* ===== DEMO NAV (selector de pantallas) ===== */
+.demo-nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+  background: rgba(10,10,14,0.95); backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(124,106,247,0.4);
+  padding: 8px 16px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.demo-nav span { font-size: 0.7rem; color: var(--accent3); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-right: 4px; }
+.demo-btn {
+  padding: 5px 12px; border-radius: 20px; font-size: 0.72rem; font-weight: 600;
+  border: 1px solid var(--border2); background: var(--bg3); color: var(--text2);
+  cursor: pointer; transition: all 0.2s; font-family: inherit;
+}
+.demo-btn:hover { border-color: var(--accent2); color: var(--accent3); }
+.demo-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+.screen { display: none; padding-top: 44px; min-height: 100vh; }
+.screen.visible { display: block; }
+
+/* ===== MEJORA 1: LOGIN ===== */
+.auth-screen {
+  min-height: calc(100vh - 44px);
+  display: flex; align-items: center; justify-content: center; padding: 2rem;
+  background: radial-gradient(ellipse at 20% 50%, rgba(124,106,247,0.14) 0%, transparent 60%),
+              radial-gradient(ellipse at 80% 20%, rgba(167,139,250,0.1) 0%, transparent 50%), var(--bg);
+}
+.auth-card {
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: 20px; padding: 2.5rem 2rem; width: min(440px,100%); text-align: center;
+}
+.auth-logo {
+  font-family: 'DM Serif Display', serif; font-size: 2.4rem; color: var(--accent2);
+  display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 6px;
+}
+.auth-logo i { font-size: 2.2rem; }
+.auth-tagline { font-size: 1.05rem; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+.auth-desc { font-size: 0.84rem; color: var(--text2); margin-bottom: 2rem; line-height: 1.6; }
+/* MEJORA: Banner de aviso honesto */
+.auth-notice {
+  background: rgba(124,106,247,0.08); border: 1px solid rgba(124,106,247,0.25);
+  border-radius: var(--radius-sm); padding: 10px 14px; margin-bottom: 1.25rem;
+  font-size: 0.78rem; color: var(--accent3); text-align: left; display: flex; gap: 8px; align-items: flex-start;
+}
+.auth-notice i { flex-shrink: 0; margin-top: 1px; }
+.auth-buttons { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.25rem; }
+.auth-btn {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  padding: 13px 20px; border-radius: var(--radius-sm);
+  font-size: 0.9rem; font-weight: 500; cursor: pointer; border: none;
+  font-family: inherit; transition: all 0.2s; width: 100%;
+}
+.auth-btn.google { background: #fff; color: #1a1a2e; }
+.auth-btn.google:hover { background: #f0f0f0; transform: translateY(-1px); }
+.auth-btn.facebook { background: #1877f2; color: white; }
+.auth-btn.facebook:hover { background: #166fe5; transform: translateY(-1px); }
+/* MEJORA: botón guest más prominente con separador */
+.auth-divider { display: flex; align-items: center; gap: 12px; margin: 0.25rem 0; }
+.auth-divider::before, .auth-divider::after { content:''; flex:1; height:1px; background: var(--border); }
+.auth-divider span { font-size: 0.72rem; color: var(--text3); }
+.auth-btn.guest {
+  background: var(--bg3); color: var(--text); border: 1px solid var(--border2);
+  font-size: 0.875rem;
+}
+.auth-btn.guest:hover { background: var(--bg4); transform: translateY(-1px); }
+.auth-note { font-size: 0.72rem; color: var(--text3); line-height: 1.5; }
+.auth-note a { color: var(--accent3); }
+
+/* ===== LAYOUT PRINCIPAL ===== */
+.app-layout { display: flex; min-height: calc(100vh - 44px); }
+
+/* ===== MEJORA 2: SIDEBAR ===== */
+.sidebar {
+  width: var(--sidebar-w); background: var(--bg2);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; flex-shrink: 0;
+  position: sticky; top: 44px; height: calc(100vh - 44px); overflow-y: auto;
+}
+.sidebar-logo {
+  padding: 1.25rem 1.25rem 1rem;
+  font-family: 'DM Serif Display', serif; font-size: 1.5rem; color: var(--accent2);
+  border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px;
+}
+/* MEJORA: estado de sincronización más visible */
+.sidebar-sync {
+  padding: 8px 14px; font-size: 0.73rem;
+  display: flex; align-items: center; gap: 7px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(34,197,94,0.05);
+}
+.sync-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); flex-shrink: 0; }
+.sync-dot.offline { background: var(--danger); }
+.sync-text { color: var(--text2); font-weight: 500; }
+
+/* MEJORA: secciones del menú con separación clara */
+.nav-section {
+  padding: 1rem 1.25rem 0.35rem;
+  font-size: 0.63rem; color: var(--text3); text-transform: uppercase;
+  letter-spacing: 2px; font-weight: 600;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 0.6rem 1rem; margin: 2px 0.6rem;
+  border-radius: var(--radius-sm); cursor: pointer;
+  font-size: 0.875rem; color: var(--text2); transition: all 0.2s; font-weight: 400;
+}
+.nav-item:hover { background: var(--bg3); color: var(--text); }
+.nav-item.active {
+  background: rgba(124,106,247,0.15); color: var(--accent3);
+  font-weight: 500;
+}
+.nav-item i { font-size: 1.1rem; flex-shrink: 0; }
+.nav-badge {
+  margin-left: auto; background: var(--accent); color: white;
+  font-size: 0.63rem; padding: 2px 7px; border-radius: 20px; font-weight: 700;
+}
+.nav-badge.red { background: var(--danger); }
+.nav-sep { height: 1px; background: var(--border); margin: 0.5rem 1.25rem; }
+
+/* MEJORA: botón de logout con texto */
+.sidebar-bottom {
+  margin-top: auto; padding: 1rem; border-top: 1px solid var(--border);
+}
+.user-card {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; border-radius: var(--radius-sm);
+  background: var(--bg3); border: 1px solid var(--border);
+}
+.user-avatar {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.85rem; font-weight: 700; color: white; flex-shrink: 0;
+}
+.user-info { flex: 1; min-width: 0; }
+.user-name { font-size: 0.8rem; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.user-sub { font-size: 0.69rem; color: var(--text3); }
+/* MEJORA: botón de logout visible con texto */
+.logout-btn {
+  display: flex; align-items: center; gap: 6px; width: 100%;
+  padding: 8px 10px; margin-top: 8px; border-radius: var(--radius-sm);
+  background: none; border: 1px solid rgba(239,68,68,0.2);
+  color: rgba(239,68,68,0.7); font-size: 0.78rem; cursor: pointer;
+  font-family: inherit; transition: all 0.2s; justify-content: center; font-weight: 500;
+}
+.logout-btn:hover { background: rgba(239,68,68,0.08); color: var(--danger); border-color: rgba(239,68,68,0.4); }
+
+/* ===== MAIN CONTENT ===== */
+.main-content { flex: 1; min-width: 0; }
+.topbar {
+  position: sticky; top: 44px; z-index: 50;
+  background: rgba(14,14,18,0.92); backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border); padding: 0 1.5rem;
+  height: var(--topbar-h); display: flex; align-items: center; gap: 1rem;
+}
+.topbar-title { font-size: 1.05rem; font-weight: 700; color: var(--text); white-space: nowrap; }
+.search-box {
+  flex: 1; max-width: 380px; display: flex; align-items: center; gap: 8px;
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 8px 12px; transition: border-color 0.2s;
+}
+.search-box:focus-within { border-color: var(--accent2); }
+.search-box i { color: var(--text3); font-size: 1rem; flex-shrink: 0; }
+.search-box input {
+  background: none; border: none; outline: none; color: var(--text);
+  font-size: 0.875rem; width: 100%; font-family: inherit;
+}
+.search-box input::placeholder { color: var(--text3); }
+.topbar-actions { display: flex; gap: 8px; margin-left: auto; }
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 16px; border-radius: var(--radius-sm);
+  font-size: 0.84rem; font-weight: 500; cursor: pointer;
+  border: none; transition: all 0.2s; font-family: inherit;
+}
+.btn-primary { background: var(--accent); color: white; }
+.btn-primary:hover { background: var(--accent2); transform: translateY(-1px); }
+.btn-ghost { background: var(--bg3); color: var(--text2); border: 1px solid var(--border); }
+.btn-ghost:hover { color: var(--text); border-color: var(--border2); }
+.btn-icon {
+  background: none; border: none; cursor: pointer; color: var(--text3);
+  padding: 6px; border-radius: 6px; display: inline-flex; align-items: center;
+  transition: all 0.2s; font-size: 1.1rem;
+}
+.btn-icon:hover { color: var(--text); background: var(--bg3); }
+.content { padding: 1.5rem; }
+
+/* ===== MEJORA 3: COLECCIÓN ===== */
+/* Stats solo si hay items, más compactos */
+.stats-row {
+  display: flex; gap: 0.75rem; margin-bottom: 1.25rem; flex-wrap: wrap;
+}
+.stat-pill {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 40px; padding: 8px 18px;
+  display: flex; align-items: center; gap: 8px;
+}
+.stat-pill-val { font-size: 1.3rem; font-weight: 700; color: var(--accent2); line-height: 1; }
+.stat-pill-label { font-size: 0.72rem; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; }
+.view-controls {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 1.25rem; flex-wrap: wrap;
+}
+.view-toggle {
+  display: flex; background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); overflow: hidden;
+}
+.view-btn {
+  padding: 7px 12px; cursor: pointer; color: var(--text2);
+  font-size: 0.95rem; border: none; background: none; transition: all 0.2s;
+}
+.view-btn.active { background: var(--accent); color: white; }
+.filter-select {
+  background: var(--bg3); border: 1px solid var(--border); color: var(--text);
+  padding: 7px 12px; border-radius: var(--radius-sm); font-size: 0.82rem;
+  outline: none; cursor: pointer; font-family: inherit;
+}
+.count-label { margin-left: auto; font-size: 0.8rem; color: var(--text3); }
+
+/* MEJORA: tarjetas con texto más grande */
+.items-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(160px,1fr)); gap: 1rem;
+}
+.item-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden; cursor: pointer;
+  transition: all 0.25s; position: relative;
+}
+.item-card:hover { border-color: var(--border2); transform: translateY(-3px); box-shadow: 0 10px 30px rgba(124,106,247,0.15); }
+.item-cover {
+  width: 100%; aspect-ratio: 2/3; background: var(--bg3);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 3rem; overflow: hidden; position: relative;
+}
+.item-cover img { width:100%; height:100%; object-fit:cover; display:block; }
+/* MEJORA: badge en la parte inferior de la imagen, no encima */
+.item-cat-badge {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  padding: 4px 8px; font-size: 0.65rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.5px; text-align: center;
+  background: linear-gradient(to top, rgba(0,0,0,0.85), transparent);
+  color: white;
+}
+.item-info { padding: 0.65rem 0.75rem 0.8rem; }
+/* MEJORA: nombre más grande y legible */
+.item-name {
+  font-size: 0.875rem; font-weight: 600; color: var(--text);
+  margin-bottom: 4px; line-height: 1.35;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.item-meta { font-size: 0.72rem; color: var(--text3); }
+.platform-chip {
+  display: inline-block; background: rgba(124,106,247,0.12);
+  color: var(--accent3); font-size: 0.68rem; padding: 2px 8px;
+  border-radius: 20px; font-weight: 500; margin-top: 4px;
+}
+.rating-mini { color: var(--gold); font-size: 0.75rem; margin-top: 4px; }
+/* MEJORA: placeholder de sin portada más variado */
+.no-cover-placeholder {
+  width: 100%; height: 100%; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 6px;
+  background: var(--bg3);
+}
+.no-cover-placeholder i { font-size: 2.5rem; color: var(--text3); }
+.no-cover-placeholder span { font-size: 0.65rem; color: var(--text3); text-align: center; padding: 0 8px; }
+
+/* COVER colors por categoría */
+.cover-game { background: linear-gradient(135deg, #1a1535, #2d1f6e); }
+.cover-bluray { background: linear-gradient(135deg, #0d2035, #0c4a6e); }
+.cover-book { background: linear-gradient(135deg, #0d2818, #14532d); }
+.cover-movie { background: linear-gradient(135deg, #2a1a00, #713f12); }
+
+/* ===== MEJORA 4: MODAL DE AÑADIR ===== */
+.modal-overlay {
+  position: fixed; inset: 44px 0 0 0; background: rgba(0,0,0,0.8);
+  z-index: 200; display: flex; align-items: center; justify-content: center;
+  backdrop-filter: blur(4px); padding: 1rem;
+}
+.modal-overlay.hidden { display: none; }
+.modal {
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: 16px; width: min(560px,100%);
+  box-shadow: 0 24px 64px rgba(0,0,0,0.6);
+  max-height: 85vh; overflow-y: auto; display: flex; flex-direction: column;
+}
+.modal-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  padding: 1.5rem 1.5rem 0; flex-shrink: 0;
+}
+.modal-title { font-size: 1.15rem; font-weight: 700; color: var(--text); }
+.modal-sub { font-size: 0.8rem; color: var(--text3); margin-top: 3px; }
+.scanner-tabs {
+  display: flex; gap: 4px; margin: 1rem 1.5rem 0;
+  background: var(--bg3); padding: 4px; border-radius: var(--radius-sm);
+}
+.scanner-tab {
+  flex: 1; padding: 9px 8px; text-align: center; cursor: pointer;
+  border-radius: 6px; font-size: 0.82rem; color: var(--text3);
+  border: none; background: none; font-family: inherit;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  transition: all 0.2s; font-weight: 500;
+}
+.scanner-tab.active { background: var(--accent); color: white; }
+.modal-body { padding: 0 1.5rem 0; flex: 1; }
+.modal-footer {
+  display: flex; justify-content: flex-end; gap: 8px;
+  padding: 1rem 1.5rem 1.5rem;
+  border-top: 1px solid var(--border); margin-top: 1rem; flex-shrink: 0;
+}
+/* MEJORA: cámara con flujo de un solo paso */
+.camera-area {
+  margin: 1rem 0 0.5rem;
+  background: var(--bg); border: 2px dashed var(--border2);
+  border-radius: var(--radius); aspect-ratio: 4/3;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 10px; color: var(--text3); cursor: pointer; transition: all 0.2s;
+}
+.camera-area:hover { border-color: var(--accent2); }
+.camera-area i { font-size: 3rem; color: var(--accent2); }
+.camera-area p { font-size: 0.9rem; font-weight: 600; color: var(--text2); }
+.camera-area small { font-size: 0.75rem; }
+.cam-hint {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 0.78rem; color: var(--text3); margin-bottom: 1rem;
+}
+.cam-hint i { color: var(--accent2); }
+
+/* MEJORA: formulario con sección principal + sección colapsable */
+.form-section-title {
+  font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1.5px;
+  color: var(--text3); font-weight: 600; padding: 1rem 0 0.5rem;
+}
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-group.full { grid-column: 1 / -1; }
+.form-label { font-size: 0.78rem; color: var(--text2); font-weight: 500; }
+.form-input, .form-select, .form-textarea {
+  background: var(--bg3); border: 1px solid var(--border);
+  color: var(--text); padding: 9px 12px; border-radius: var(--radius-sm);
+  font-size: 0.875rem; outline: none; font-family: inherit;
+  transition: border-color 0.2s; width: 100%;
+}
+.form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--accent2); }
+.form-textarea { resize: vertical; min-height: 80px; }
+.required-star { color: var(--danger); }
+/* MEJORA: sección extra colapsable */
+.extra-fields-toggle {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 0.8rem; color: var(--accent3); cursor: pointer;
+  padding: 0.75rem 0 0.25rem; font-weight: 500; user-select: none;
+}
+.extra-fields-toggle i { transition: transform 0.2s; }
+.extra-fields-toggle.open i { transform: rotate(180deg); }
+.extra-fields { display: none; }
+.extra-fields.open { display: contents; }
+
+/* ===== MEJORA 5: MODAL DETALLE ===== */
+.detail-header-row {
+  display: flex; gap: 1.25rem; padding: 1.25rem 1.5rem; align-items: flex-start;
+}
+.detail-cover-wrap {
+  width: 120px; height: 170px; border-radius: var(--radius-sm);
+  background: var(--bg3); flex-shrink: 0; overflow: hidden;
+  display: flex; align-items: center; justify-content: center; font-size: 3rem;
+}
+.detail-cover-wrap img { width:100%; height:100%; object-fit:cover; }
+.detail-header-info { flex: 1; min-width: 0; }
+.detail-category-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 10px; border-radius: 20px; font-size: 0.7rem;
+  font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+  background: rgba(124,106,247,0.15); color: var(--accent3);
+  margin-bottom: 8px;
+}
+.detail-title { font-family: 'DM Serif Display', serif; font-size: 1.3rem; color: var(--text); margin-bottom: 8px; line-height: 1.2; }
+/* MEJORA: acciones en la parte superior del detalle */
+.detail-quick-actions {
+  display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap;
+}
+.detail-fields { padding: 0 1.5rem; }
+.detail-field { display: flex; gap: 0.75rem; margin-bottom: 7px; font-size: 0.82rem; align-items: baseline; }
+.detail-field-label { color: var(--text3); min-width: 85px; flex-shrink: 0; font-size: 0.75rem; }
+.detail-field-value { color: var(--text); font-weight: 500; }
+.detail-desc { font-size: 0.82rem; color: var(--text2); line-height: 1.65; margin: 0.75rem 0; padding: 0 1.5rem; }
+/* MEJORA: rating con confirmación visual */
+.rating-row { padding: 0.75rem 1.5rem; display: flex; align-items: center; gap: 12px; }
+.rating-label { font-size: 0.8rem; color: var(--text3); }
+.rating-stars { display: flex; gap: 4px; }
+.star { font-size: 1.3rem; cursor: pointer; transition: transform 0.15s; color: var(--bg4); }
+.star.filled { color: var(--gold); }
+.star:hover { transform: scale(1.25); }
+.rating-saved { font-size: 0.72rem; color: var(--success); opacity: 0; transition: opacity 0.3s; margin-left: 4px; }
+.rating-saved.show { opacity: 1; }
+.detail-footer {
+  display: flex; gap: 8px; padding: 1rem 1.5rem 1.5rem;
+  border-top: 1px solid var(--border); margin-top: 0.5rem; flex-wrap: wrap;
+}
+.btn-danger { background: rgba(239,68,68,0.1); color: var(--danger); border: 1px solid rgba(239,68,68,0.25); }
+.btn-danger:hover { background: rgba(239,68,68,0.2); }
+.btn-success { background: rgba(34,197,94,0.1); color: var(--success); border: 1px solid rgba(34,197,94,0.25); }
+.btn-success:hover { background: rgba(34,197,94,0.2); }
+
+/* ===== MEJORA 6: WISHLIST CON FILTROS ===== */
+.wishlist-controls {
+  display: flex; gap: 8px; margin-bottom: 1.25rem; align-items: center; flex-wrap: wrap;
+}
+.wishlist-item {
+  display: flex; align-items: center; gap: 1rem;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1rem 1.25rem;
+  margin-bottom: 0.6rem; cursor: pointer; transition: all 0.2s;
+}
+.wishlist-item:hover { border-color: var(--border2); background: var(--bg3); }
+.wishlist-thumb {
+  width: 48px; height: 64px; border-radius: 6px;
+  background: var(--bg3); flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 1.5rem;
+  overflow: hidden;
+}
+.wishlist-body { flex: 1; min-width: 0; }
+.wishlist-name { font-size: 0.95rem; font-weight: 600; color: var(--text); }
+.wishlist-meta { font-size: 0.78rem; color: var(--text3); margin-top: 3px; }
+/* MEJORA: botón con texto más natural */
+.btn-got-it {
+  background: rgba(34,197,94,0.1); color: var(--success);
+  border: 1px solid rgba(34,197,94,0.3); padding: 7px 14px;
+  border-radius: var(--radius-sm); font-size: 0.8rem; font-weight: 600;
+  cursor: pointer; font-family: inherit; transition: all 0.2s; white-space: nowrap;
+  display: flex; align-items: center; gap: 5px;
+}
+.btn-got-it:hover { background: rgba(34,197,94,0.2); }
+
+/* ===== MEJORA 7: ESTADÍSTICAS ===== */
+.stats-page-header {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(140px,1fr));
+  gap: 0.75rem; margin-bottom: 1.5rem;
+}
+.stat-summary-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1.25rem 1.25rem;
+  text-align: center;
+}
+.stat-summary-val { font-size: 2rem; font-weight: 700; color: var(--accent2); line-height: 1; }
+.stat-summary-label { font-size: 0.72rem; color: var(--text3); margin-top: 5px; text-transform: uppercase; letter-spacing: 1px; }
+.stat-summary-sub { font-size: 0.75rem; color: var(--text2); margin-top: 4px; font-weight: 500; }
+
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px,1fr)); gap: 1rem; }
+.stats-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; }
+.stats-card-title { font-size: 0.78rem; color: var(--text2); text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600; margin-bottom: 1.25rem; }
+
+/* MEJORA: barras más gruesas y con color por categoría */
+.stat-bar-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.stat-bar-label { font-size: 0.82rem; color: var(--text); min-width: 90px; font-weight: 500; }
+.stat-bar-track { flex: 1; height: 10px; background: var(--bg4); border-radius: 6px; overflow: hidden; }
+.stat-bar-fill { height: 100%; border-radius: 6px; transition: width 0.8s cubic-bezier(0.4,0,0.2,1); }
+.stat-bar-val { font-size: 0.8rem; color: var(--text2); min-width: 30px; text-align: right; font-weight: 600; }
+
+/* MEJORA: gráfico de pastel (donut) con CSS */
+.donut-wrap { display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap; }
+.donut-chart {
+  position: relative; width: 120px; height: 120px;
+  border-radius: 50%; flex-shrink: 0;
+}
+.donut-hole {
+  position: absolute; inset: 22px; border-radius: 50%;
+  background: var(--bg2); display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+}
+.donut-total { font-size: 1.4rem; font-weight: 700; color: var(--accent2); }
+.donut-sub { font-size: 0.62rem; color: var(--text3); text-transform: uppercase; }
+.donut-legend { display: flex; flex-direction: column; gap: 7px; }
+.legend-item { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; }
+.legend-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+.legend-name { color: var(--text2); flex: 1; }
+.legend-pct { color: var(--text); font-weight: 600; }
+
+/* ===== TOAST ===== */
+.toast-area { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 9998; display: flex; flex-direction: column; gap: 8px; }
+.toast {
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: var(--radius-sm); padding: 0.75rem 1rem;
+  display: flex; align-items: center; gap: 10px; font-size: 0.83rem; color: var(--text);
+  animation: slideIn 0.3s ease; box-shadow: 0 8px 24px rgba(0,0,0,0.5); min-width: 220px;
+}
+@keyframes slideIn { from { transform: translateX(100px); opacity: 0; } }
+.toast i { font-size: 1.1rem; }
+
+/* ===== EMPTY STATE ===== */
+.empty-state { text-align: center; padding: 4rem 2rem; }
+.empty-state i { font-size: 4rem; color: var(--text3); display: block; margin-bottom: 1rem; }
+.empty-state h3 { font-size: 1.1rem; color: var(--text2); margin-bottom: 8px; }
+.empty-state p { font-size: 0.85rem; color: var(--text3); margin-bottom: 1.5rem; line-height: 1.6; }
+
+/* Scrollbar */
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px;}
+
+/* Responsive hint */
+@media(max-width:700px){
+  .app-layout { flex-direction: column; }
+  .sidebar { width: 100%; height: auto; position: static; flex-direction: row; flex-wrap: wrap; }
+  .items-grid { grid-template-columns: repeat(auto-fill, minmax(130px,1fr)); }
+}
+</style>
+</head>
+<body>
+
+<!-- BARRA DE DEMO -->
+<div class="demo-nav">
+  <span>Maqueta</span>
+  <button class="demo-btn active" onclick="showScreen('login')">Login</button>
+  <button class="demo-btn" onclick="showScreen('collection')">Colección</button>
+  <button class="demo-btn" onclick="showScreen('modal-add')">Añadir item</button>
+  <button class="demo-btn" onclick="showScreen('detail')">Detalle item</button>
+  <button class="demo-btn" onclick="showScreen('wishlist')">Lista de deseos</button>
+  <button class="demo-btn" onclick="showScreen('stats')">Estadísticas</button>
+</div>
+
+<!-- ===== PANTALLA 1: LOGIN MEJORADO ===== -->
+<div class="screen visible" id="screen-login">
+  <div class="auth-screen">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <i class="ti ti-stack-2"></i>
+        <span>Collectr</span>
+      </div>
+      <p class="auth-tagline">Tu colección. Siempre contigo.</p>
+      <p class="auth-desc">Cataloga videojuegos, películas, libros, cómics y más.<br>Sincronizado en la nube, disponible offline.</p>
+
+      <!-- MEJORA: aviso honesto sobre cloud -->
+      <div class="auth-notice">
+        <i class="ti ti-info-circle"></i>
+        <span>El inicio de sesión con Google y Facebook estará disponible próximamente. Por ahora puedes usar el modo local.</span>
+      </div>
+
+      <div class="auth-buttons">
+        <button class="auth-btn google" style="opacity:0.5;cursor:default">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z" fill="#34A853"/><path d="M3.964 10.71c-.18-.54-.282-1.117-.282-1.71s.102-1.17.282-1.71V4.958H.957C.347 6.173 0 7.548 0 9s.347 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>
+          Continuar con Google <span style="font-size:0.72rem;opacity:0.7">(próximamente)</span>
+        </button>
+        <button class="auth-btn facebook" style="opacity:0.5;cursor:default">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+          Continuar con Facebook <span style="font-size:0.72rem;opacity:0.7">(próximamente)</span>
+        </button>
+        <div class="auth-divider"><span>o</span></div>
+        <button class="auth-btn guest" onclick="showScreen('collection');showToast('¡Bienvenido! Usando modo local','info')">
+          <i class="ti ti-device-laptop"></i>
+          Continuar sin cuenta — guardar en este dispositivo
+        </button>
+      </div>
+      <p class="auth-note">Al continuar aceptas los <a href="#">Términos de servicio</a>. En modo local, tus datos se guardan solo en este dispositivo.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PANTALLA 2: COLECCIÓN MEJORADA ===== -->
+<div class="screen" id="screen-collection">
+  <div class="app-layout">
+    <!-- SIDEBAR MEJORADO -->
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <i class="ti ti-stack-2"></i>
+        Collectr
+      </div>
+      <!-- MEJORA: estado de sync más visible -->
+      <div class="sidebar-sync">
+        <div class="sync-dot offline"></div>
+        <span class="sync-text">Modo local · sin cuenta</span>
+      </div>
+
+      <div class="nav-section">Mi colección</div>
+      <div class="nav-item active" onclick="setNav(this)"><i class="ti ti-layout-grid"></i> Todos los ítems <span class="nav-badge">5</span></div>
+      <div class="nav-item" onclick="setNav(this)"><i class="ti ti-category"></i> Categorías</div>
+      <div class="nav-item" onclick="setNav(this)"><i class="ti ti-heart"></i> Lista de deseos <span class="nav-badge red">1</span></div>
+      <div class="nav-item" onclick="setNav(this)"><i class="ti ti-chart-bar"></i> Estadísticas</div>
+
+      <div class="nav-sep"></div>
+      <!-- MEJORA: herramientas con separación clara -->
+      <div class="nav-section">Herramientas</div>
+      <div class="nav-item" onclick="showScreen('modal-add')"><i class="ti ti-scan"></i> Escanear / Añadir</div>
+      <div class="nav-item"><i class="ti ti-upload"></i> Importar</div>
+      <div class="nav-item"><i class="ti ti-download"></i> Exportar</div>
+
+      <div class="sidebar-bottom">
+        <div class="user-card">
+          <div class="user-avatar">G</div>
+          <div class="user-info">
+            <div class="user-name">Invitado</div>
+            <div class="user-sub">Modo local</div>
+          </div>
+        </div>
+        <!-- MEJORA: botón de logout con texto -->
+        <button class="logout-btn" onclick="showToast('¿Cerrar sesión? Tus datos locales se conservarán','info')">
+          <i class="ti ti-logout"></i> Cerrar sesión
+        </button>
+      </div>
+    </aside>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <div class="main-content">
+      <div class="topbar">
+        <div class="topbar-title">Mi Colección</div>
+        <div class="search-box">
+          <i class="ti ti-search"></i>
+          <input type="text" placeholder="Buscar por nombre, plataforma, género...">
+        </div>
+        <div class="topbar-actions">
+          <button class="btn btn-primary" onclick="showScreen('modal-add')">
+            <i class="ti ti-plus"></i> Añadir
+          </button>
+        </div>
+      </div>
+
+      <div class="content">
+        <!-- MEJORA: stats en pills compactos -->
+        <div class="stats-row">
+          <div class="stat-pill"><div class="stat-pill-val">5</div><div class="stat-pill-label">Total</div></div>
+          <div class="stat-pill"><div class="stat-pill-val">3</div><div class="stat-pill-label">Videojuegos</div></div>
+          <div class="stat-pill"><div class="stat-pill-val">2</div><div class="stat-pill-label">Películas</div></div>
+          <div class="stat-pill"><div class="stat-pill-val">0</div><div class="stat-pill-label">Libros</div></div>
+        </div>
+
+        <div class="view-controls">
+          <div class="view-toggle">
+            <button class="view-btn active"><i class="ti ti-layout-grid"></i></button>
+            <button class="view-btn"><i class="ti ti-list"></i></button>
+          </div>
+          <select class="filter-select">
+            <option>Todas las categorías</option>
+            <option>Videojuegos</option>
+            <option>Películas</option>
+            <option>Libros</option>
+          </select>
+          <select class="filter-select">
+            <option>Más recientes</option>
+            <option>A → Z</option>
+            <option>Mejor valorados</option>
+          </select>
+          <span class="count-label">5 ítems</span>
+        </div>
+
+        <!-- MEJORA: grid con tarjetas más grandes y legibles -->
+        <div class="items-grid">
+          <div class="item-card" onclick="showScreen('detail')">
+            <div class="item-cover cover-game">
+              <div class="no-cover-placeholder">
+                <i class="ti ti-device-gamepad-2"></i>
+                <span>The Last of Us<br>Part II</span>
+              </div>
+              <div class="item-cat-badge">Videojuego</div>
+            </div>
+            <div class="item-info">
+              <div class="item-name">The Last of Us Part II</div>
+              <div class="platform-chip">PlayStation 4</div>
+              <div class="rating-mini">★★★★★</div>
+            </div>
+          </div>
+          <div class="item-card" onclick="showScreen('detail')">
+            <div class="item-cover cover-bluray">
+              <div class="no-cover-placeholder">
+                <i class="ti ti-movie"></i>
+                <span>Dune:<br>Parte Dos</span>
+              </div>
+              <div class="item-cat-badge">Blu-ray</div>
+            </div>
+            <div class="item-info">
+              <div class="item-name">Dune: Parte Dos</div>
+              <div class="platform-chip">4K Blu-ray</div>
+              <div class="rating-mini">★★★★★</div>
+            </div>
+          </div>
+          <div class="item-card" onclick="showScreen('detail')">
+            <div class="item-cover cover-game">
+              <div class="no-cover-placeholder">
+                <i class="ti ti-device-gamepad-2"></i>
+                <span>Elden Ring</span>
+              </div>
+              <div class="item-cat-badge">Videojuego</div>
+            </div>
+            <div class="item-info">
+              <div class="item-name">Elden Ring</div>
+              <div class="platform-chip">PlayStation 5</div>
+              <div class="rating-mini">★★★★★</div>
+            </div>
+          </div>
+          <div class="item-card" onclick="showScreen('detail')">
+            <div class="item-cover cover-book">
+              <div class="no-cover-placeholder">
+                <i class="ti ti-book"></i>
+                <span>Dune<br>(Frank Herbert)</span>
+              </div>
+              <div class="item-cat-badge">Libro</div>
+            </div>
+            <div class="item-info">
+              <div class="item-name">Dune (Frank Herbert)</div>
+              <div class="platform-chip">Tapa dura</div>
+              <div class="rating-mini">★★★★★</div>
+            </div>
+          </div>
+          <div class="item-card" onclick="showScreen('detail')">
+            <div class="item-cover cover-bluray">
+              <div class="no-cover-placeholder">
+                <i class="ti ti-movie"></i>
+                <span>Oppenheimer</span>
+              </div>
+              <div class="item-cat-badge">Blu-ray</div>
+            </div>
+            <div class="item-info">
+              <div class="item-name">Oppenheimer</div>
+              <div class="platform-chip">Blu-ray</div>
+              <div class="rating-mini">★★★★</div>
+            </div>
+          </div>
+          <!-- Tarjeta "Añadir primero" si estuviera vacío -->
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PANTALLA 3: MODAL AÑADIR MEJORADO ===== -->
+<div class="screen" id="screen-modal-add">
+  <div class="app-layout">
+    <aside class="sidebar">
+      <div class="sidebar-logo"><i class="ti ti-stack-2"></i> Collectr</div>
+      <div class="sidebar-sync"><div class="sync-dot offline"></div><span class="sync-text">Modo local</span></div>
+      <div class="nav-section">Mi colección</div>
+      <div class="nav-item active"><i class="ti ti-layout-grid"></i> Todos los ítems <span class="nav-badge">5</span></div>
+      <div class="nav-item"><i class="ti ti-category"></i> Categorías</div>
+      <div class="nav-item"><i class="ti ti-heart"></i> Lista de deseos <span class="nav-badge red">1</span></div>
+      <div class="nav-item"><i class="ti ti-chart-bar"></i> Estadísticas</div>
+      <div class="nav-sep"></div>
+      <div class="nav-section">Herramientas</div>
+      <div class="nav-item"><i class="ti ti-scan"></i> Escanear / Añadir</div>
+      <div class="nav-item"><i class="ti ti-upload"></i> Importar</div>
+      <div class="nav-item"><i class="ti ti-download"></i> Exportar</div>
+      <div class="sidebar-bottom">
+        <div class="user-card">
+          <div class="user-avatar">G</div>
+          <div class="user-info"><div class="user-name">Invitado</div><div class="user-sub">Modo local</div></div>
+        </div>
+        <button class="logout-btn"><i class="ti ti-logout"></i> Cerrar sesión</button>
+      </div>
+    </aside>
+    <div class="main-content" style="position:relative">
+      <div class="topbar">
+        <div class="topbar-title">Mi Colección</div>
+        <div class="search-box"><i class="ti ti-search"></i><input type="text" placeholder="Buscar..."></div>
+        <div class="topbar-actions"><button class="btn btn-primary"><i class="ti ti-plus"></i> Añadir</button></div>
+      </div>
+      <!-- MODAL SUPERPUESTO -->
+      <div class="modal-overlay" id="add-modal" style="position:absolute">
+        <div class="modal">
+          <div class="modal-header">
+            <div>
+              <div class="modal-title">Añadir a la colección</div>
+              <div class="modal-sub">Escanea un código de barras, sube una foto o añade manualmente</div>
+            </div>
+            <button class="btn-icon" onclick="showScreen('collection')"><i class="ti ti-x"></i></button>
+          </div>
+
+          <div class="scanner-tabs">
+            <button class="scanner-tab active" onclick="switchTab(this,'tab-camera')"><i class="ti ti-camera"></i> Cámara</button>
+            <button class="scanner-tab" onclick="switchTab(this,'tab-image')"><i class="ti ti-photo"></i> Imagen</button>
+            <button class="scanner-tab" onclick="switchTab(this,'tab-manual')"><i class="ti ti-pencil"></i> Manual</button>
+          </div>
+
+          <div class="modal-body">
+            <!-- PESTAÑA CÁMARA: flujo simplificado -->
+            <div id="tab-camera">
+              <div class="camera-area" onclick="showToast('En la app real aquí se activaría la cámara','info')">
+                <i class="ti ti-camera"></i>
+                <p>Toca para activar la cámara</p>
+                <small>Apunta al código de barras o a la portada del producto</small>
+              </div>
+              <div class="cam-hint">
+                <i class="ti ti-bulb"></i>
+                <span>La IA de Claude identificará automáticamente el producto por la portada o el código de barras.</span>
+              </div>
+            </div>
+
+            <!-- PESTAÑA IMAGEN -->
+            <div id="tab-image" style="display:none">
+              <div class="camera-area" style="border-style:dashed" onclick="showToast('Aquí se abriría el selector de archivos','info')">
+                <i class="ti ti-cloud-upload"></i>
+                <p>Arrastra o toca para seleccionar imagen</p>
+                <small>Portada, código de barras, foto del producto...</small>
+              </div>
+            </div>
+
+            <!-- PESTAÑA MANUAL: MEJORA campos simplificados + extra colapsable -->
+            <div id="tab-manual" style="display:none">
+              <div class="form-section-title">Información principal</div>
+              <div class="form-grid">
+                <div class="form-group full">
+                  <label class="form-label">Nombre / Título <span class="required-star">*</span></label>
+                  <input type="text" class="form-input" placeholder="Ej: The Last of Us Part II" id="manual-name">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Categoría <span class="required-star">*</span></label>
+                  <select class="form-select">
+                    <option>Videojuego</option><option>Película</option><option>DVD</option>
+                    <option>Blu-ray</option><option>Libro</option><option>Cómic</option>
+                    <option>Música</option><option>Otro</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Estado</label>
+                  <select class="form-select">
+                    <option>Lo tengo</option>
+                    <option>Lo quiero (lista de deseos)</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- MEJORA: campos extra colapsables -->
+              <div class="extra-fields-toggle" onclick="toggleExtra(this)" id="extra-toggle">
+                <i class="ti ti-chevron-down"></i>
+                Más detalles (plataforma, año, editorial...)
+              </div>
+              <div class="form-grid extra-fields" id="extra-fields">
+                <div class="form-group">
+                  <label class="form-label">Año</label>
+                  <input type="number" class="form-input" placeholder="2024">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Plataforma / Soporte</label>
+                  <input type="text" class="form-input" placeholder="PS5, Switch, Blu-ray...">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Editorial / Estudio</label>
+                  <input type="text" class="form-input" placeholder="Sony, Nintendo...">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Género</label>
+                  <input type="text" class="form-input" placeholder="Acción, RPG, Thriller...">
+                </div>
+                <div class="form-group full">
+                  <label class="form-label">Notas personales</label>
+                  <textarea class="form-textarea" placeholder="Edición especial, estado del disco, regalo de..."></textarea>
+                </div>
+                <div class="form-group full">
+                  <label class="form-label">URL de portada (opcional)</label>
+                  <input type="url" class="form-input" placeholder="https://...">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">ISBN / Código de barras</label>
+                  <input type="text" class="form-input" placeholder="978...">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button class="btn btn-ghost" onclick="showScreen('collection')"><i class="ti ti-x"></i> Cancelar</button>
+            <!-- MEJORA: botón desactivado hasta tener nombre -->
+            <button class="btn btn-primary" onclick="showToast('¡Ítem guardado en tu colección!','success');showScreen('collection')">
+              <i class="ti ti-check"></i> Guardar en colección
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PANTALLA 4: DETALLE MEJORADO ===== -->
+<div class="screen" id="screen-detail">
+  <div class="app-layout">
+    <aside class="sidebar">
+      <div class="sidebar-logo"><i class="ti ti-stack-2"></i> Collectr</div>
+      <div class="sidebar-sync"><div class="sync-dot offline"></div><span class="sync-text">Modo local</span></div>
+      <div class="nav-section">Mi colección</div>
+      <div class="nav-item active"><i class="ti ti-layout-grid"></i> Todos los ítems <span class="nav-badge">5</span></div>
+      <div class="nav-item"><i class="ti ti-category"></i> Categorías</div>
+      <div class="nav-item"><i class="ti ti-heart"></i> Lista de deseos <span class="nav-badge red">1</span></div>
+      <div class="nav-item"><i class="ti ti-chart-bar"></i> Estadísticas</div>
+      <div class="nav-sep"></div>
+      <div class="nav-section">Herramientas</div>
+      <div class="nav-item" onclick="showScreen('modal-add')"><i class="ti ti-scan"></i> Escanear / Añadir</div>
+      <div class="nav-item"><i class="ti ti-upload"></i> Importar</div>
+      <div class="nav-item"><i class="ti ti-download"></i> Exportar</div>
+      <div class="sidebar-bottom">
+        <div class="user-card"><div class="user-avatar">G</div><div class="user-info"><div class="user-name">Invitado</div><div class="user-sub">Modo local</div></div></div>
+        <button class="logout-btn"><i class="ti ti-logout"></i> Cerrar sesión</button>
+      </div>
+    </aside>
+    <div class="main-content" style="position:relative">
+      <div class="topbar">
+        <div class="topbar-title">Mi Colección</div>
+        <div class="search-box"><i class="ti ti-search"></i><input type="text" placeholder="Buscar..."></div>
+        <div class="topbar-actions"><button class="btn btn-primary" onclick="showScreen('modal-add')"><i class="ti ti-plus"></i> Añadir</button></div>
+      </div>
+      <div class="modal-overlay" style="position:absolute">
+        <div class="modal">
+          <div class="modal-header">
+            <div>
+              <!-- MEJORA: chip de categoría + acciones arriba -->
+              <div class="detail-category-chip"><i class="ti ti-device-gamepad-2"></i> Videojuego</div>
+            </div>
+            <button class="btn-icon" onclick="showScreen('collection')"><i class="ti ti-x"></i></button>
+          </div>
+
+          <!-- MEJORA: cover + info + acciones rápidas en la cabecera -->
+          <div class="detail-header-row">
+            <div class="detail-cover-wrap cover-game">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--text3)">
+                <i class="ti ti-device-gamepad-2" style="font-size:2.5rem"></i>
+                <span style="font-size:0.65rem;text-align:center;padding:0 8px">The Last of Us Part II</span>
+              </div>
+            </div>
+            <div class="detail-header-info">
+              <div class="detail-title">The Last of Us Part II</div>
+              <!-- MEJORA: acciones en la parte superior -->
+              <div class="detail-quick-actions">
+                <button class="btn btn-ghost" style="font-size:0.78rem;padding:6px 10px" onclick="showToast('Abriendo editor...','info')">
+                  <i class="ti ti-edit"></i> Editar
+                </button>
+                <button class="btn btn-danger" style="font-size:0.78rem;padding:6px 10px" onclick="showToast('¿Eliminar este ítem?','info')">
+                  <i class="ti ti-trash"></i> Eliminar
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="detail-fields">
+            <div class="detail-field"><span class="detail-field-label">Plataforma</span><span class="detail-field-value"><span class="platform-chip">PlayStation 4</span></span></div>
+            <div class="detail-field"><span class="detail-field-label">Año</span><span class="detail-field-value">2020</span></div>
+            <div class="detail-field"><span class="detail-field-label">Estudio</span><span class="detail-field-value">Naughty Dog</span></div>
+            <div class="detail-field"><span class="detail-field-label">Género</span><span class="detail-field-value">Acción / Aventura</span></div>
+          </div>
+
+          <div class="detail-desc">
+            Una historia épica de supervivencia y redención. Cinco años después de su peligroso viaje por el país devastado por una pandemia, Ellie y Joel se han asentado en Jackson.
+          </div>
+
+          <!-- MEJORA: rating con confirmación "Guardado" -->
+          <div class="rating-row">
+            <span class="rating-label">Tu valoración:</span>
+            <div class="rating-stars" id="stars">
+              <span class="star filled" onclick="setRating(1)">★</span>
+              <span class="star filled" onclick="setRating(2)">★</span>
+              <span class="star filled" onclick="setRating(3)">★</span>
+              <span class="star filled" onclick="setRating(4)">★</span>
+              <span class="star filled" onclick="setRating(5)">★</span>
+            </div>
+            <span class="rating-saved" id="rating-saved"><i class="ti ti-check"></i> Guardado</span>
+          </div>
+
+          <div class="detail-footer">
+            <button class="btn btn-ghost" onclick="showToast('Añadiendo a lista de deseos...','info')">
+              <i class="ti ti-heart"></i> Añadir a deseos
+            </button>
+            <button class="btn btn-ghost" style="margin-left:auto" onclick="showScreen('collection')">
+              <i class="ti ti-arrow-left"></i> Volver
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PANTALLA 5: WISHLIST MEJORADA ===== -->
+<div class="screen" id="screen-wishlist">
+  <div class="app-layout">
+    <aside class="sidebar">
+      <div class="sidebar-logo"><i class="ti ti-stack-2"></i> Collectr</div>
+      <div class="sidebar-sync"><div class="sync-dot offline"></div><span class="sync-text">Modo local</span></div>
+      <div class="nav-section">Mi colección</div>
+      <div class="nav-item" onclick="showScreen('collection')"><i class="ti ti-layout-grid"></i> Todos los ítems <span class="nav-badge">5</span></div>
+      <div class="nav-item"><i class="ti ti-category"></i> Categorías</div>
+      <div class="nav-item active"><i class="ti ti-heart"></i> Lista de deseos <span class="nav-badge red">1</span></div>
+      <div class="nav-item"><i class="ti ti-chart-bar"></i> Estadísticas</div>
+      <div class="nav-sep"></div>
+      <div class="nav-section">Herramientas</div>
+      <div class="nav-item" onclick="showScreen('modal-add')"><i class="ti ti-scan"></i> Escanear / Añadir</div>
+      <div class="nav-item"><i class="ti ti-upload"></i> Importar</div>
+      <div class="nav-item"><i class="ti ti-download"></i> Exportar</div>
+      <div class="sidebar-bottom">
+        <div class="user-card"><div class="user-avatar">G</div><div class="user-info"><div class="user-name">Invitado</div><div class="user-sub">Modo local</div></div></div>
+        <button class="logout-btn"><i class="ti ti-logout"></i> Cerrar sesión</button>
+      </div>
+    </aside>
+    <div class="main-content">
+      <div class="topbar">
+        <div class="topbar-title">Lista de deseos</div>
+        <div class="search-box"><i class="ti ti-search"></i><input type="text" placeholder="Buscar en lista de deseos..."></div>
+        <div class="topbar-actions"><button class="btn btn-primary" onclick="showScreen('modal-add')"><i class="ti ti-plus"></i> Añadir</button></div>
+      </div>
+      <div class="content">
+        <!-- MEJORA: controles de filtrado en wishlist -->
+        <div class="wishlist-controls">
+          <select class="filter-select">
+            <option>Todas las categorías</option>
+            <option>Videojuegos</option>
+            <option>Películas</option>
+            <option>Libros</option>
+          </select>
+          <select class="filter-select">
+            <option>Más recientes primero</option>
+            <option>A → Z</option>
+            <option>Por categoría</option>
+          </select>
+          <span class="count-label" style="margin-left:auto">1 ítem</span>
+        </div>
+
+        <div class="wishlist-item">
+          <div class="wishlist-thumb cover-game" style="border-radius:6px">
+            <i class="ti ti-device-gamepad-2" style="color:var(--text3);font-size:1.5rem"></i>
+          </div>
+          <div class="wishlist-body">
+            <div class="wishlist-name">Ghost of Tsushima</div>
+            <div class="wishlist-meta">Videojuego · PlayStation 5 · Sucker Punch</div>
+            <div style="margin-top:5px"><span class="platform-chip">PS5</span></div>
+          </div>
+          <!-- MEJORA: botón con texto más natural -->
+          <button class="btn-got-it" onclick="showToast('¡Ghost of Tsushima movido a tu colección!','success')">
+            <i class="ti ti-check"></i> ¡Ya lo tengo!
+          </button>
+        </div>
+
+        <div style="margin-top:1.5rem; padding:1.5rem; background:var(--bg2); border:1px dashed var(--border2); border-radius:var(--radius); text-align:center; color:var(--text3);">
+          <i class="ti ti-heart" style="font-size:2rem;display:block;margin-bottom:8px;color:var(--accent3)"></i>
+          <p style="font-size:0.85rem">¿Hay algo más que quieras? <a href="#" style="color:var(--accent3)" onclick="showScreen('modal-add')">Añádelo a tu lista de deseos</a></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PANTALLA 6: ESTADÍSTICAS MEJORADAS ===== -->
+<div class="screen" id="screen-stats">
+  <div class="app-layout">
+    <aside class="sidebar">
+      <div class="sidebar-logo"><i class="ti ti-stack-2"></i> Collectr</div>
+      <div class="sidebar-sync"><div class="sync-dot offline"></div><span class="sync-text">Modo local</span></div>
+      <div class="nav-section">Mi colección</div>
+      <div class="nav-item" onclick="showScreen('collection')"><i class="ti ti-layout-grid"></i> Todos los ítems <span class="nav-badge">5</span></div>
+      <div class="nav-item"><i class="ti ti-category"></i> Categorías</div>
+      <div class="nav-item"><i class="ti ti-heart"></i> Lista de deseos <span class="nav-badge red">1</span></div>
+      <div class="nav-item active"><i class="ti ti-chart-bar"></i> Estadísticas</div>
+      <div class="nav-sep"></div>
+      <div class="nav-section">Herramientas</div>
+      <div class="nav-item" onclick="showScreen('modal-add')"><i class="ti ti-scan"></i> Escanear / Añadir</div>
+      <div class="nav-item"><i class="ti ti-upload"></i> Importar</div>
+      <div class="nav-item"><i class="ti ti-download"></i> Exportar</div>
+      <div class="sidebar-bottom">
+        <div class="user-card"><div class="user-avatar">G</div><div class="user-info"><div class="user-name">Invitado</div><div class="user-sub">Modo local</div></div></div>
+        <button class="logout-btn"><i class="ti ti-logout"></i> Cerrar sesión</button>
+      </div>
+    </aside>
+    <div class="main-content">
+      <div class="topbar">
+        <div class="topbar-title">Estadísticas</div>
+        <div class="search-box"><i class="ti ti-search"></i><input type="text" placeholder="Buscar..."></div>
+        <div class="topbar-actions"><button class="btn btn-primary" onclick="showScreen('modal-add')"><i class="ti ti-plus"></i> Añadir</button></div>
+      </div>
+      <div class="content">
+        <!-- MEJORA: resumen con más info -->
+        <div class="stats-page-header">
+          <div class="stat-summary-card">
+            <div class="stat-summary-val">5</div>
+            <div class="stat-summary-label">Ítems total</div>
+            <div class="stat-summary-sub">en colección</div>
+          </div>
+          <div class="stat-summary-card">
+            <div class="stat-summary-val">1</div>
+            <div class="stat-summary-label">En deseos</div>
+            <div class="stat-summary-sub">por conseguir</div>
+          </div>
+          <div class="stat-summary-card">
+            <div class="stat-summary-val">4.8</div>
+            <div class="stat-summary-label">Valoración</div>
+            <div class="stat-summary-sub">media ★</div>
+          </div>
+          <div class="stat-summary-card">
+            <div class="stat-summary-val">3</div>
+            <div class="stat-summary-label">Plataformas</div>
+            <div class="stat-summary-sub">distintas</div>
+          </div>
+        </div>
+
+        <div class="stats-grid">
+          <!-- Gráfico de distribución tipo donut -->
+          <div class="stats-card">
+            <div class="stats-card-title">Distribución por categoría</div>
+            <div class="donut-wrap">
+              <!-- Donut chart con CSS conic-gradient -->
+              <div class="donut-chart" style="background: conic-gradient(#7c6af7 0% 60%, #0ea5e9 60% 100%);">
+                <div class="donut-hole">
+                  <div class="donut-total">5</div>
+                  <div class="donut-sub">ítems</div>
+                </div>
+              </div>
+              <div class="donut-legend">
+                <div class="legend-item"><div class="legend-dot" style="background:#7c6af7"></div><span class="legend-name">Videojuegos</span><span class="legend-pct">3 (60%)</span></div>
+                <div class="legend-item"><div class="legend-dot" style="background:#0ea5e9"></div><span class="legend-name">Películas / Blu-ray</span><span class="legend-pct">2 (40%)</span></div>
+                <div class="legend-item"><div class="legend-dot" style="background:#22c55e"></div><span class="legend-name">Libros</span><span class="legend-pct">0 (0%)</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Barras por plataforma — más gruesas -->
+          <div class="stats-card">
+            <div class="stats-card-title">Por plataforma</div>
+            <div class="stat-bar-row">
+              <span class="stat-bar-label">PlayStation 5</span>
+              <div class="stat-bar-track"><div class="stat-bar-fill" style="width:40%;background:#7c6af7"></div></div>
+              <span class="stat-bar-val">2</span>
+            </div>
+            <div class="stat-bar-row">
+              <span class="stat-bar-label">PlayStation 4</span>
+              <div class="stat-bar-track"><div class="stat-bar-fill" style="width:20%;background:#a78bfa"></div></div>
+              <span class="stat-bar-val">1</span>
+            </div>
+            <div class="stat-bar-row">
+              <span class="stat-bar-label">4K Blu-ray</span>
+              <div class="stat-bar-track"><div class="stat-bar-fill" style="width:20%;background:#0ea5e9"></div></div>
+              <span class="stat-bar-val">1</span>
+            </div>
+            <div class="stat-bar-row">
+              <span class="stat-bar-label">Blu-ray</span>
+              <div class="stat-bar-track"><div class="stat-bar-fill" style="width:20%;background:#38bdf8"></div></div>
+              <span class="stat-bar-val">1</span>
+            </div>
+          </div>
+
+          <!-- Valoraciones -->
+          <div class="stats-card">
+            <div class="stats-card-title">Distribución de valoraciones</div>
+            <div class="stat-bar-row">
+              <span class="stat-bar-label">★★★★★ 5 estrellas</span>
+              <div class="stat-bar-track"><div class="stat-bar-fill" style="width:80%;background:#f5c842"></div></div>
+              <span class="stat-bar-val">4</span>
+            </div>
+            <div class="stat-bar-row">
+              <span class="stat-bar-label">★★★★ 4 estrellas</span>
+              <div class="stat-bar-track"><div class="stat-bar-fill" style="width:20%;background:#f5c842aa"></div></div>
+              <span class="stat-bar-val">1</span>
+            </div>
+            <div class="stat-bar-row">
+              <span class="stat-bar-label">★★★ 3 o menos</span>
+              <div class="stat-bar-track"><div class="stat-bar-fill" style="width:0%;background:#f5c84255"></div></div>
+              <span class="stat-bar-val">0</span>
+            </div>
+          </div>
+
+          <!-- Por año -->
+          <div class="stats-card">
+            <div class="stats-card-title">Por año de lanzamiento</div>
+            <div class="stat-bar-row">
+              <span class="stat-bar-label">2024</span>
+              <div class="stat-bar-track"><div class="stat-bar-fill" style="width:20%;background:#22c55e"></div></div>
+              <span class="stat-bar-val">1</span>
+            </div>
+            <div class="stat-bar-row">
+              <span class="stat-bar-label">2023</span>
+              <div class="stat-bar-track"><div class="stat-bar-fill" style="width:20%;background:#22c55e"></div></div>
+              <span class="stat-bar-val">1</span>
+            </div>
+            <div class="stat-bar-row">
+              <span class="stat-bar-label">2022</span>
+              <div class="stat-bar-track"><div class="stat-bar-fill" style="width:20%;background:#22c55e"></div></div>
+              <span class="stat-bar-val">1</span>
+            </div>
+            <div class="stat-bar-row">
+              <span class="stat-bar-label">2020</span>
+              <div class="stat-bar-track"><div class="stat-bar-fill" style="width:40%;background:#22c55e"></div></div>
+              <span class="stat-bar-val">2</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-area" id="toast-area"></div>
+
+<script>
+// Navegación entre pantallas demo
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('visible'));
+  const s = document.getElementById('screen-' + name);
+  if (s) { s.classList.add('visible'); window.scrollTo(0,0); }
+  document.querySelectorAll('.demo-btn').forEach(b => {
+    b.classList.toggle('active', b.textContent.toLowerCase().includes(name.replace('-',' ').toLowerCase()) ||
+      (name==='modal-add' && b.textContent.includes('Añadir')) ||
+      (name==='detail' && b.textContent.includes('Detalle')) ||
+      (name==='collection' && b.textContent.includes('Colección')) ||
+      (name==='wishlist' && b.textContent.includes('deseos')) ||
+      (name==='stats' && b.textContent.includes('Estadísticas')) ||
+      (name==='login' && b.textContent.includes('Login'))
+    );
+  });
+}
+
+// Toast
+function showToast(msg, type='success') {
+  const icons = { success:'ti-check-circle', error:'ti-alert-circle', info:'ti-info-circle' };
+  const colors = { success:'var(--success)', error:'var(--danger)', info:'var(--accent2)' };
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.innerHTML = `<i class="ti ${icons[type]}" style="color:${colors[type]}"></i><span>${msg}</span>`;
+  const area = document.getElementById('toast-area');
+  area.appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+// Nav activo en sidebar
+function setNav(el) {
+  el.closest('.sidebar').querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// Tabs del scanner
+function switchTab(btn, tabId) {
+  btn.closest('.modal').querySelectorAll('.scanner-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  btn.closest('.modal').querySelectorAll('[id^="tab-"]').forEach(t => t.style.display = 'none');
+  document.getElementById(tabId).style.display = '';
+}
+
+// Extra fields toggle
+function toggleExtra(btn) {
+  btn.classList.toggle('open');
+  const fields = document.getElementById('extra-fields');
+  fields.classList.toggle('open');
+}
+
+// Rating con feedback de guardado
+function setRating(n) {
+  const stars = document.querySelectorAll('#stars .star');
+  stars.forEach((s,i) => s.classList.toggle('filled', i < n));
+  const saved = document.getElementById('rating-saved');
+  saved.classList.add('show');
+  showToast('Valoración guardada: ' + '★'.repeat(n), 'success');
+  setTimeout(() => saved.classList.remove('show'), 2500);
+}
+</script>
+</body>
+</html>
