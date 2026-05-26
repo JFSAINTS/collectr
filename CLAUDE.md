@@ -131,16 +131,17 @@ const firebaseConfig = {
 
 1. **Autoscan** — cámara activa escanea cada 1.5s con ZXing
 2. **ZXing** (`decodeBarcodeFromImage`) — decodifica EAN-13, EAN-8, UPC-A, UPC-E, CODE-128, CODE-39, QR
-3. **Open Library API** — lookup por ISBN (libros)
-4. **UPC Item DB API** — lookup por UPC (productos generales)
-5. **Claude Vision API** — análisis visual de portada como fallback final
-6. **Vibración** — `navigator.vibrate([100])` al detectar código
+   - Si detecta código → Open Library (libros) + UPC Item DB (otros)
+3. **Google Cloud Vision API** (`WEB_DETECTION`) — si no hay código de barras a los ~7.5s, captura automática y reconoce la portada por coincidencia visual (igual que Google Lens)
+   - Extrae: nombre del producto, categoría, plataforma, editorial, año
+   - Para libros/cómics → enriquece con Open Library por título
+4. **Vibración** — `navigator.vibrate([100])` al detectar código de barras
 
 Si ninguna fuente encuentra resultado → el usuario completa manualmente.
 
-**Claude API endpoint:** `https://api.anthropic.com/v1/messages`
-**Modelo:** `claude-sonnet-4-20250514`
-⚠️ Requiere API key de Anthropic en el header — actualmente NO está configurada en el cliente (no se debe exponer en código frontend público).
+**Google Vision API key:** `AIzaSyBGz85M4pcshA4_ooJX9sCK4Kf9KfBHjXQ` (misma que Firebase)
+⚠️ **Requiere habilitar Cloud Vision API** en Google Cloud Console:
+https://console.cloud.google.com/apis/library/vision.googleapis.com?project=collectr-4ecb9
 
 ---
 
@@ -238,7 +239,8 @@ git -C D:\CATALOGA push origin main
 
 ## Pendiente / Próximas mejoras sugeridas
 
-- [ ] **API key de Claude en el backend** — no exponer en el cliente. Necesita un proxy/serverless function.
+- [x] **Motor de reconocimiento de portadas** — Google Cloud Vision WEB_DETECTION (como Google Lens). Requiere activar la API en Google Cloud Console.
+- [ ] **Activar Cloud Vision API** — ir a https://console.cloud.google.com/apis/library/vision.googleapis.com?project=collectr-4ecb9
 - [ ] **Habilitar Google Auth** en Firebase Console → Authentication → Sign-in methods.
 - [ ] **Habilitar Facebook Auth** → requiere app en Meta Developers + configurar OAuth.
 - [ ] **Firestore Security Rules** — revisar `firestore.rules` antes de ir a producción.

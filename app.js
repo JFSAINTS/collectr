@@ -523,14 +523,13 @@ window.startCamera = async () => {
     document.getElementById('start-cam-btn').style.display = 'none';
     document.getElementById('stop-cam-btn').style.display = '';
     document.getElementById('capture-btn').style.display = '';
-    setStatus('camera-status', 'info', 'Apunta al código de barras o portada — detectando automáticamente...');
+    setStatus('camera-status', 'info', 'Apunta a la portada del producto — se detecta automáticamente...');
     enumerateCameras();
-    // Autoscan: tries to decode barcode every 1.5s automatically
+    // Autoscan: barcode first, fallback to Google Vision after 5 attempts (~7.5s)
     if (window.autoscanInt) clearInterval(window.autoscanInt);
     let _attempts = 0;
     window.autoscanInt = setInterval(async () => {
       if (!cameraStream) { clearInterval(window.autoscanInt); return; }
-      if (++_attempts > 20) { clearInterval(window.autoscanInt); return; } // stop after 30s
       const _v = document.getElementById('camera-video');
       const _cv = document.getElementById('camera-canvas');
       if (!_v || !_v.videoWidth) return;
@@ -546,9 +545,19 @@ window.startCamera = async () => {
           stopCamera();
           document.getElementById('image-preview').src = 'data:image/jpeg;base64,' + _b64;
           document.getElementById('image-preview').style.display = 'block';
-          analyzeWithClaude(_b64, 'camera-status');
+          analyzeImage(_b64, 'camera-status');
+          return;
         }
       } catch(_e) {}
+      // After 5 barcode attempts (~7.5s), auto-capture and use Google Vision
+      if (++_attempts >= 5) {
+        clearInterval(window.autoscanInt);
+        setStatus('camera-status', 'info', 'Sin código — reconociendo portada con Google Lens...');
+        stopCamera();
+        document.getElementById('image-preview').src = 'data:image/jpeg;base64,' + _b64;
+        document.getElementById('image-preview').style.display = 'block';
+        analyzeImage(_b64, 'camera-status');
+      }
     }, 1500);
   } catch(e) {
     setStatus('camera-status', 'error', 'Cámara no disponible. Usa la pestaña "Imagen" para subir una foto.');
@@ -602,7 +611,7 @@ window.captureFrame = () => {
   stopCamera();
   document.getElementById('image-preview').src = dataUrl;
   document.getElementById('image-preview').style.display = 'block';
-  analyzeWithClaude(pendingImageData, 'camera-status');
+  analyzeImage(pendingImageData, 'camera-status');
 };
 
 // ===== IMAGE UPLOAD =====
@@ -621,7 +630,7 @@ function processImageFile(file) {
     document.getElementById('image-preview').src = dataUrl;
     document.getElementById('image-preview').style.display = 'block';
     pendingImageData = dataUrl.split(',')[1];
-    analyzeWithClaude(pendingImageData, 'image-status');
+    analyzeImage(pendingImageData, 'image-status');
   };
   reader.readAsDataURL(file);
 }
@@ -706,12 +715,139 @@ function guessPlatform(title, brand) {
   return '';
 }
 
-// ===== CLAUDE AI ANALYSIS =====
-async function analyzeWithClaude(base64, statusId) {
+// ===== GOOGLE VISION (GOOGLE LENS) IMAGE RECOGNITION =====
+// Uses the same Firebase/Google API key — requires Cloud Vision API enabled in the project:
+// https://console.cloud.google.com/apis/library/vision.googleapis.com?project=collectr-4ecb9
+const GOOGLE_API_KEY = 'AIzaSyBGz85M4pcshA4_ooJX9sCK4Kf9KfBHjXQ';
+
+async function callGoogleVision(base64) {
+  const r = await fetch(
+    `https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_API_KEY}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        requests: [{
+          image: { content: base64 },
+          features: [
+            { type: 'WEB_DETECTION', maxResults: 10 },
+            { type: 'LABEL_DETECTION', maxResults: 15 }
+          ]
+        }]
+      }),
+      signal: AbortSignal.timeout(10000)
+    }
+  );
+  if (!r.ok) throw new Error(`Vision API ${r.status}: ${r.statusText}`);
+  const data = await r.json();
+  if (data.responses?.[0]?.error) throw new Error(data.responses[0].error.message);
+  return {
+    webDetection: data.responses?.[0]?.webDetection || {},
+    labels: data.responses?.[0]?.labelAnnotations || []
+  };
+}
+
+function parseVisionResult(webDetection, labels) {
+  // Best guess from Google (e.g. "the last of us part ii ps4")
+  const bestGuess = (webDetection.bestGuessLabels?.[0]?.label || '').trim();
+
+  // Web entities sorted by confidence score
+  const entities = (webDetection.webEntities || [])
+    .filter(e => e.description && (e.score || 0) > 0.35)
+    .sort((a, b) => (b.score || 0) - (a.score || 0));
+
+  // All descriptive text for detection
+  const allText = [
+    bestGuess,
+    ...entities.map(e => e.description || ''),
+    ...labels.map(l => l.description || '')
+  ].join(' ').toLowerCase();
+
+  // Product name: prefer best guess, fall back to top entity
+  let name = (bestGuess || entities[0]?.description || '').trim();
+  // Strip trailing platform tokens often appended by Google (e.g. "...ps4", "...switch")
+  name = name.replace(/\s+(ps[1-5]|xbox(\s+\w+)?|switch|nintendo\s+\w+|4k|uhd|blu[\-\s]?ray|dvd|steam|pc)\s*$/i, '').trim();
+  // Title-case
+  name = name.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+
+  const category = guessCategory(name, allText);
+  const platform = detectPlatformFromText(allText);
+  const publisher = detectPublisherFromEntities(entities, name);
+  const yearMatch = entities.map(e => e.description || '').join(' ').match(/\b(19[5-9]\d|20[0-3]\d)\b/);
+
+  return {
+    name,
+    category,
+    platform,
+    publisher,
+    year: yearMatch?.[0] || '',
+    genre: '',
+    desc: '',
+    barcode: '',
+    confidence: (entities[0]?.score || 0) > 0.7 ? 'high' : (entities[0]?.score || 0) > 0.45 ? 'medium' : 'low'
+  };
+}
+
+function detectPlatformFromText(t) {
+  if (/playstation\s*5|ps\s*5\b/i.test(t)) return 'PlayStation 5';
+  if (/playstation\s*4|ps\s*4\b/i.test(t)) return 'PlayStation 4';
+  if (/playstation\s*3|ps\s*3\b/i.test(t)) return 'PlayStation 3';
+  if (/xbox\s*series\s*x/i.test(t)) return 'Xbox Series X';
+  if (/xbox\s*one/i.test(t)) return 'Xbox One';
+  if (/nintendo\s*switch|\bswitch\b/i.test(t)) return 'Nintendo Switch';
+  if (/4k\s*uhd|uhd\s*blu|4k\s*blu/i.test(t)) return '4K Blu-ray';
+  if (/blu[\-\s]?ray/i.test(t)) return 'Blu-ray';
+  if (/\bdvd\b/i.test(t)) return 'DVD';
+  if (/\bsteam\b|\bpc\s*game\b/i.test(t)) return 'PC';
+  if (/3ds|nintendo\s*3ds/i.test(t)) return 'Nintendo 3DS';
+  return '';
+}
+
+function detectPublisherFromEntities(entities, name) {
+  const known = ['Sony','Microsoft','Nintendo','Activision','Electronic Arts','EA','Ubisoft',
+    'Bethesda','Rockstar','2K Games','Square Enix','Bandai Namco','Capcom','Konami','SEGA',
+    'Naughty Dog','FromSoftware','CD Projekt','Warner Bros','Disney','Marvel','Netflix','HBO',
+    'Universal','Paramount','Sony Pictures','Focus Entertainment','Devolver Digital',
+    'Annapurna','THQ Nordic','Deep Silver','Penguin','HarperCollins','Random House',
+    'Simon & Schuster','Hachette','Macmillan','Planeta','Norma Editorial'];
+  const n1 = (name.split(' ')[0] || '').toLowerCase();
+  for (const e of entities) {
+    const d = e.description || '';
+    if (d.toLowerCase().includes(n1) || n1.includes(d.toLowerCase())) continue; // skip if it's part of the product name
+    if (known.some(p => d.toLowerCase().includes(p.toLowerCase()))) return d;
+  }
+  return '';
+}
+
+async function enrichByTitle(name, category) {
+  if (category === 'book' || category === 'comic') {
+    try {
+      const r = await fetch(
+        `https://openlibrary.org/search.json?title=${encodeURIComponent(name)}&limit=1`,
+        { signal: AbortSignal.timeout(5000) }
+      );
+      const d = await r.json();
+      const doc = d.docs?.[0];
+      if (doc && doc.title) {
+        return {
+          name: doc.title,
+          year: doc.first_publish_year?.toString() || '',
+          publisher: doc.publisher?.[0] || '',
+          genre: doc.subject_facet?.slice(0, 3).join(', ') || '',
+          cover: doc.cover_i ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg` : '',
+          confidence: 'high'
+        };
+      }
+    } catch(e) {}
+  }
+  return null;
+}
+
+async function analyzeImage(base64, statusId) {
   setStatus(statusId, 'loading', 'Decodificando código de barras...');
   let result = null, barcode = null;
 
-  // Step 1: ZXing barcode decode + database lookup
+  // Step 1: ZXing barcode decode + database lookup (fast)
   try {
     barcode = await decodeBarcodeFromImage(base64);
     if (barcode) {
@@ -720,41 +856,32 @@ async function analyzeWithClaude(base64, statusId) {
     }
   } catch(e) {}
 
-  // Step 2: if not found via barcode, fall back to Claude Vision
+  // Step 2: Google Vision WEB_DETECTION (Google Lens) if no result yet
   if (!result?.name) {
-    setStatus(statusId, 'loading', `${barcode ? 'Código ' + barcode + ' no encontrado — ' : ''}Analizando portada con IA...`);
-    const prompt = `Analiza esta imagen. Puede ser la portada o código de barras de un videojuego, película, DVD, Blu-ray, libro, cómic, música u otro producto coleccionable.${barcode ? ' El código de barras detectado es: ' + barcode : ''}
-
-Devuelve ÚNICAMENTE un objeto JSON sin markdown:
-{"name":"título","category":"game|movie|dvd|bluray|book|comic|music|other","year":"año","platform":"plataforma","publisher":"editor","genre":"géneros","desc":"descripción breve","barcode":"código","confidence":"high|medium|low"}
-
-Si no puedes identificar el producto devuelve: {"error":"No identificado"}`;
+    setStatus(statusId, 'loading', `${barcode ? 'Código ' + barcode + ' no encontrado — ' : ''}Reconociendo portada con Google Lens...`);
     try {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1000,
-          messages: [{ role: 'user', content: [
-            { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: base64 } },
-            { type: 'text', text: prompt }
-          ]}]
-        })
-      });
-      const data = await response.json();
-      if (data.error) throw new Error(data.error.message);
-      const text = data.content.map(b => b.text || '').join('');
-      const clean = text.replace(/```json|```/g, '').trim();
-      try { result = JSON.parse(clean); }
-      catch(e2) { const m = clean.match(/\{[\s\S]*\}/); if(m) result = JSON.parse(m[0]); else throw new Error('JSON inválido'); }
-      if (result?.error) {
-        if (barcode) result = { name: '', barcode, category: 'other', year: '', platform: '', publisher: '', genre: '', desc: '', confidence: 'low' };
-        else { setStatus(statusId, 'error', 'No se pudo identificar. Añádelo manualmente.'); document.getElementById('scan-result').style.display = 'block'; return; }
+      const { webDetection, labels } = await callGoogleVision(base64);
+      const visionResult = parseVisionResult(webDetection, labels);
+
+      if (visionResult.name) {
+        if (barcode) visionResult.barcode = barcode;
+        // Enrich books/comics with Open Library
+        const enriched = await enrichByTitle(visionResult.name, visionResult.category);
+        result = enriched ? { ...visionResult, ...enriched, barcode: visionResult.barcode || '' } : visionResult;
       }
     } catch(e) {
-      if (barcode) result = { name: '', barcode, category: 'other', confidence: 'low' };
-      else { setStatus(statusId, 'error', 'Error de análisis. Puedes editar los campos manualmente.'); document.getElementById('scan-result').style.display = 'block'; return; }
+      console.warn('[Collectr] Google Vision error:', e.message);
+      if (barcode) {
+        result = { name: '', barcode, category: 'other', confidence: 'low' };
+      } else {
+        const isApiError = e.message.includes('403') || e.message.includes('API');
+        setStatus(statusId, 'error',
+          isApiError
+            ? 'Cloud Vision API no habilitada — actívala en Google Cloud Console o añade el ítem manualmente.'
+            : 'No se pudo reconocer la imagen. Añade el ítem manualmente.');
+        document.getElementById('scan-result').style.display = 'block';
+        return;
+      }
     }
   }
 
@@ -762,7 +889,14 @@ Si no puedes identificar el producto devuelve: {"error":"No identificado"}`;
   if (result?.name || barcode) {
     if (barcode && !result.barcode) result.barcode = barcode;
     fillResultForm(result);
-    setStatus(statusId, 'success', result.name ? `Detectado: "${result.name}" · Confianza: ${result.confidence || 'alta'}` : `Código: ${barcode} — completa los datos manualmente`);
+    setStatus(statusId, 'success',
+      result.name
+        ? `Identificado: <b>${esc(result.name)}</b> · Confianza: ${result.confidence || 'alta'}`
+        : `Código: ${barcode} — completa los datos manualmente`
+    );
+  } else {
+    setStatus(statusId, 'info', 'No se encontró resultado. Completa el formulario manualmente.');
+    document.getElementById('scan-result').style.display = 'block';
   }
 }
 
