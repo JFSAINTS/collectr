@@ -552,6 +552,15 @@ select option { background: var(--bg2); color: var(--text); }
 .detection-confidence { font-size: 0.65rem; color: var(--accent3); background: rgba(124,106,247,0.12); padding: 1px 7px; border-radius: 20px; font-weight: 600; }
 .detection-check { color: var(--success); font-size: 1.1rem; flex-shrink: 0; }
 
+/* COVER PICKER */
+.cover-picker { margin: 0.5rem 0 0.75rem; background: var(--bg3); border-radius: var(--radius-sm); padding: 0.75rem; border: 1px solid var(--border); }
+.cover-picker-label { font-size: 0.74rem; color: var(--text2); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem; }
+.cover-picker-grid { display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; scrollbar-color: var(--bg4) transparent; }
+.cover-option { flex-shrink: 0; width: 78px; height: 108px; border-radius: var(--radius-sm); overflow: hidden; cursor: pointer; border: 2px solid transparent; transition: border-color 0.15s, transform 0.15s; background: var(--bg4); }
+.cover-option:hover { border-color: var(--accent2); transform: scale(1.04); }
+.cover-option.selected { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent3); }
+.cover-option img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
 /* STATUS */
 .status-box {
   padding: 0.65rem 0.9rem; border-radius: var(--radius-sm);

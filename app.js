@@ -491,6 +491,7 @@ function resetScannerForm() {
   const mcp = document.getElementById('m-cover-preview'); if(mcp) { mcp.style.display = 'none'; mcp.src = ''; }
   const slot = document.getElementById('detection-banner-slot'); if(slot) slot.innerHTML = '';
   const srSlot = document.getElementById('search-results-slot'); if(srSlot) srSlot.innerHTML = '';
+  const cpSlot = document.getElementById('cover-picker-slot'); if(cpSlot) cpSlot.innerHTML = '';
   const rEstado = document.getElementById('r-estado'); if(rEstado) rEstado.value = 'tengo';
   const mEstado = document.getElementById('m-estado'); if(mEstado) mEstado.value = 'tengo';
   // Reset scan mode
@@ -611,12 +612,13 @@ window.captureFrame = () => {
           fillResultForm(result);
           setStatus('camera-status', 'success', `Identificado: <b>${esc(result.name)}</b>`);
         } else {
-          fillResultForm({ name: '', barcode: code, category: 'other', confidence: 'low' });
-          setStatus('camera-status', 'info', `Código ${code} sin resultados. Completa los datos manualmente.`);
+          setStatus('camera-status', 'loading', `Código ${code} sin resultados. Analizando imagen...`);
+          await identifyByPhoto(pendingImageData, 'camera-status');
+          const bc = document.getElementById('r-barcode'); if (bc && !bc.value) bc.value = code;
         }
       } else {
-        setStatus('camera-status', 'info', 'No se detectó código. Cambia a modo "Foto de portada" para identificar por imagen.');
-        document.getElementById('scan-result').style.display = 'block';
+        setStatus('camera-status', 'loading', 'Sin código de barras. Analizando portada...');
+        identifyByPhoto(pendingImageData, 'camera-status');
       }
     });
   }
@@ -647,8 +649,9 @@ function processImageFile(file) {
           fillResultForm(result);
           setStatus('image-status', 'success', `Identificado: <b>${esc(result.name)}</b>`);
         } else {
-          fillResultForm({ name: '', barcode: code, category: 'other', confidence: 'low' });
-          setStatus('image-status', 'info', `Código ${code} sin resultados en bases de datos. Completa los datos manualmente.`);
+          setStatus('image-status', 'loading', `Código ${code} sin resultados. Analizando imagen...`);
+          await identifyByPhoto(pendingImageData, 'image-status');
+          const bc = document.getElementById('r-barcode'); if (bc && !bc.value) bc.value = code;
         }
       } else {
         identifyByPhoto(pendingImageData, 'image-status');
@@ -796,8 +799,10 @@ function startBarcodeAutoscan() {
           fillResultForm(result);
           setStatus('camera-status', 'success', `Identificado: <b>${esc(result.name)}</b>`);
         } else {
-          fillResultForm({ name: '', barcode: code, category: 'other', confidence: 'low' });
-          setStatus('camera-status', 'info', `Código ${code} sin resultados. Completa los datos manualmente.`);
+          pendingImageData = b64;
+          setStatus('camera-status', 'loading', `Código ${code} sin resultados en bases de datos. Analizando imagen...`);
+          await identifyByPhoto(b64, 'camera-status');
+          const bc = document.getElementById('r-barcode'); if (bc && !bc.value) bc.value = code;
         }
       }
     } catch(_e) {}
@@ -830,19 +835,13 @@ async function identifyByBarcode(barcode, statusId) {
 }
 
 // =============================================
-// IDENTIFICACIÓN POR FOTO — Vision OCR → búsqueda por texto
-// Vision se usa SOLO para OCR (TEXT_DETECTION), NO para WEB_DETECTION
+// IDENTIFICACIÓN POR FOTO — Vision OCR + WEB_DETECTION → búsqueda + picker de portadas
 // =============================================
 async function identifyByPhoto(base64, statusId) {
-  setStatus(statusId, 'loading', 'Leyendo texto de la portada con Google Vision OCR...');
-  let ocrText = '';
+  setStatus(statusId, 'loading', 'Analizando portada con Google Vision...');
+  let ocrText = '', webDetection = null;
   try {
-    ocrText = await ocrWithVision(base64);
-    if (!ocrText?.trim()) {
-      setStatus(statusId, 'error', 'No se encontró texto legible. Prueba con mejor iluminación o usa el código de barras.');
-      document.getElementById('scan-result').style.display = 'block';
-      return;
-    }
+    ({ ocrText, webDetection } = await visionAnalyze(base64));
   } catch(e) {
     const isQuota = /quota|limit|billing/i.test(e.message);
     setStatus(statusId, 'error', isQuota
@@ -852,48 +851,94 @@ async function identifyByPhoto(base64, statusId) {
     return;
   }
 
-  const { title, allLines } = parseOCRText(ocrText);
-  if (!title) {
-    document.getElementById('r-name').value = '';
-    setStatus(statusId, 'info', 'Texto detectado pero sin título claro. Añade manualmente.');
+  const { title: ocrTitle, allLines } = ocrText ? parseOCRText(ocrText) : { title: '', allLines: [] };
+  const { suggestedTitle, coverOptions } = extractWebDetectionData(webDetection);
+  const bestTitle = ocrTitle || suggestedTitle;
+
+  if (!bestTitle && !coverOptions.length) {
+    setStatus(statusId, 'error', 'No se encontró texto ni imagen reconocible. Prueba con mejor iluminación.');
     document.getElementById('scan-result').style.display = 'block';
     return;
   }
-  setStatus(statusId, 'loading', `Texto: "<b>${esc(title)}</b>" — buscando...`);
 
-  const results = await searchAllAPIs(title, allLines);
+  if (!bestTitle) {
+    fillResultForm({ name: '', category: 'other', cover: coverOptions[0] || '', confidence: 'low' });
+    showCoverPicker(coverOptions, coverOptions[0] || '');
+    setStatus(statusId, 'info', 'Sin texto legible, pero se encontraron imágenes similares. Escribe el nombre y elige la portada.');
+    return;
+  }
+
+  setStatus(statusId, 'loading', `Buscando "<b>${esc(bestTitle)}</b>"...`);
+  const results = await searchAllAPIs(bestTitle, allLines);
 
   if (!results.length) {
-    document.getElementById('r-name').value = title;
-    setStatus(statusId, 'info', `Sin resultados para "<b>${esc(title)}</b>". Completa el formulario manualmente.`);
-    document.getElementById('scan-result').style.display = 'block';
+    const cover = coverOptions[0] || '';
+    fillResultForm({ name: bestTitle, category: guessCategory(bestTitle, ''), cover, barcode: '', confidence: 'low' });
+    if (coverOptions.length) showCoverPicker(coverOptions, cover);
+    setStatus(statusId, 'info', coverOptions.length
+      ? `Sin resultados en bases de datos. Título: "<b>${esc(bestTitle)}</b>" — elige la portada correcta abajo.`
+      : `Sin resultados para "<b>${esc(bestTitle)}</b>". Completa el formulario manualmente.`);
     return;
   }
   if (results.length === 1) {
-    fillResultForm(results[0]);
-    setStatus(statusId, 'success', `Encontrado: <b>${esc(results[0].name)}</b>`);
+    const result = results[0];
+    if (!result.cover && coverOptions.length) result.cover = coverOptions[0];
+    fillResultForm(result);
+    if (coverOptions.length) showCoverPicker(coverOptions, result.cover || '');
+    setStatus(statusId, 'success', `Encontrado: <b>${esc(result.name)}</b>`);
   } else {
-    showSearchResults(results, statusId, title);
+    showSearchResults(results, statusId, bestTitle);
+    if (coverOptions.length) showCoverPicker(coverOptions, '');
   }
 }
 
-// Google Vision — TEXT_DETECTION únicamente
-async function ocrWithVision(base64) {
+// Google Vision — TEXT_DETECTION + WEB_DETECTION en una sola llamada
+async function visionAnalyze(base64) {
   const r = await fetch(
     `https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_API_KEY}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        requests: [{ image: { content: base64 }, features: [{ type: 'TEXT_DETECTION', maxResults: 1 }] }]
+        requests: [{ image: { content: base64 }, features: [
+          { type: 'TEXT_DETECTION', maxResults: 1 },
+          { type: 'WEB_DETECTION', maxResults: 10 }
+        ]}]
       }),
-      signal: AbortSignal.timeout(10000)
+      signal: AbortSignal.timeout(12000)
     }
   );
   if (!r.ok) throw new Error(`Vision API ${r.status}: ${r.statusText}`);
   const data = await r.json();
-  if (data.responses?.[0]?.error) throw new Error(data.responses[0].error.message);
-  return data.responses?.[0]?.textAnnotations?.[0]?.description || '';
+  const resp = data.responses?.[0];
+  if (resp?.error) throw new Error(resp.error.message);
+  return {
+    ocrText: resp?.textAnnotations?.[0]?.description || '',
+    webDetection: resp?.webDetection || null
+  };
+}
+
+function extractWebDetectionData(webDetection) {
+  if (!webDetection) return { suggestedTitle: '', coverOptions: [] };
+  const bestGuess = webDetection.bestGuessLabels?.[0]?.label || '';
+  const topEntity = (webDetection.webEntities || [])
+    .filter(e => e.score > 0.5 && e.description)
+    .sort((a, b) => b.score - a.score)[0]?.description || '';
+  const suggestedTitle = bestGuess || topEntity;
+  const seen = new Set();
+  const coverOptions = [];
+  const sources = [
+    ...(webDetection.fullMatchingImages || []),
+    ...(webDetection.partialMatchingImages || []),
+    ...(webDetection.visuallySimilarImages || [])
+  ];
+  for (const img of sources) {
+    if (img.url && !seen.has(img.url) && img.url.startsWith('https://') && coverOptions.length < 6) {
+      seen.add(img.url);
+      coverOptions.push(img.url);
+    }
+  }
+  return { suggestedTitle, coverOptions };
 }
 
 function parseOCRText(rawText) {
@@ -1071,6 +1116,34 @@ function showSearchResults(results, statusId, searchTitle) {
   document.getElementById('scan-result').style.display = 'none';
   setStatus(statusId, 'info', `${results.length} resultados — elige el correcto en la lista.`);
 }
+
+// =============================================
+// PICKER DE PORTADAS — imágenes similares de Google (WEB_DETECTION)
+// =============================================
+function showCoverPicker(coverOptions, selectedUrl = '') {
+  const slot = document.getElementById('cover-picker-slot');
+  if (!slot || !coverOptions.length) return;
+  slot.innerHTML = `<div class="cover-picker">
+    <div class="cover-picker-label"><i class="ti ti-photo-search"></i> Portadas similares encontradas — toca para usar como portada</div>
+    <div class="cover-picker-grid">
+      ${coverOptions.map(url => `<div class="cover-option${url === selectedUrl ? ' selected' : ''}" onclick="selectCoverOption(${esc(JSON.stringify(url))}, this)">
+        <img src="${esc(url)}" alt="" loading="lazy" onerror="this.parentElement.style.display='none'">
+      </div>`).join('')}
+    </div>
+  </div>`;
+  document.getElementById('scan-result').style.display = 'block';
+}
+
+window.selectCoverOption = (url, el) => {
+  document.querySelectorAll('.cover-option').forEach(e => e.classList.remove('selected'));
+  el.classList.add('selected');
+  const inp = document.getElementById('r-cover');
+  const prev = document.getElementById('r-cover-preview');
+  if (inp) inp.value = url;
+  if (prev) { prev.src = url; prev.style.display = 'block'; }
+  const bannerCover = document.querySelector('.detection-banner-cover');
+  if (bannerCover) bannerCover.innerHTML = `<img src="${esc(url)}" alt="" onerror="this.style.display='none'">`;
+};
 
 window.selectSearchResult = (i) => {
   const result = window._searchResults?.[i];
