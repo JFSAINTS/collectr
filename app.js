@@ -708,21 +708,21 @@ function guessPlatform(title, brand) {
 
 // ===== CLAUDE AI ANALYSIS =====
 async function analyzeWithClaude(base64, statusId) {
-  setStatus(statusId, 'loading', '<div class="spinner"></div> Decodificando código de barras...');
+  setStatus(statusId, 'loading', 'Decodificando código de barras...');
   let result = null, barcode = null;
 
   // Step 1: ZXing barcode decode + database lookup
   try {
     barcode = await decodeBarcodeFromImage(base64);
     if (barcode) {
-      setStatus(statusId, 'loading', `<div class="spinner"></div> Código <b>${barcode}</b> — buscando en bases de datos...`);
+      setStatus(statusId, 'loading', `Código <b>${barcode}</b> — buscando en bases de datos...`);
       result = await lookupBarcode(barcode);
     }
   } catch(e) {}
 
   // Step 2: if not found via barcode, fall back to Claude Vision
   if (!result?.name) {
-    setStatus(statusId, 'loading', `<div class="spinner"></div> ${barcode ? 'Código ' + barcode + ' no encontrado — ' : ''}Analizando portada con IA...`);
+    setStatus(statusId, 'loading', `${barcode ? 'Código ' + barcode + ' no encontrado — ' : ''}Analizando portada con IA...`);
     const prompt = `Analiza esta imagen. Puede ser la portada o código de barras de un videojuego, película, DVD, Blu-ray, libro, cómic, música u otro producto coleccionable.${barcode ? ' El código de barras detectado es: ' + barcode : ''}
 
 Devuelve ÚNICAMENTE un objeto JSON sin markdown:

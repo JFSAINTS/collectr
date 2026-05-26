@@ -1,22 +1,26 @@
-// Collectr â Service Worker v2.0
+// Collectr — Service Worker v2.0
 const CACHE_NAME = 'collectr-v2';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
-  '/src/styles.css',
-  '/src/app.js',
-  '/src/firebase-config.js',
+  '/styles.css',
+  '/app.js',
+  '/firebase-config.js',
   '/manifest.json',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
 ];
 
-// Install: cache static assets
+// Install: cache static assets individually so one 404 doesn't break the rest
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS.map(url => new Request(url, { cache: 'reload' })));
-    }).catch(() => {})
+      return Promise.allSettled(
+        STATIC_ASSETS.map(url =>
+          cache.add(new Request(url, { cache: 'reload' })).catch(() => {})
+        )
+      );
+    })
   );
   self.skipWaiting();
 });
@@ -35,7 +39,7 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Don't cache API calls or Firebase
+  // Don't intercept API calls or Firebase
   if (url.hostname.includes('googleapis') ||
       url.hostname.includes('firestore') ||
       url.hostname.includes('anthropic') ||
@@ -45,7 +49,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Cache-first for static assets (fonts, icons, CSS from CDN)
+  // Cache-first for external CDN assets (fonts, icons, CSS from CDN)
   if (url.hostname !== self.location.hostname) {
     event.respondWith(
       caches.match(event.request).then((cached) => {

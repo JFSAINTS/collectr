@@ -1,7 +1,7 @@
 {
-  "name": "Collectr â Tu ColecciÃ³n Digital",
+  "name": "Collectr — Tu Colección Digital",
   "short_name": "Collectr",
-  "description": "Cataloga tu colecciÃ³n de videojuegos, pelÃ­culas, libros, cÃ³mics y mÃ¡s. Escanea cÃ³digos de barras y portadas con IA.",
+  "description": "Cataloga tu colección de videojuegos, películas, libros, cómics y más. Escanea códigos de barras y portadas con IA.",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
@@ -24,34 +24,18 @@
       "purpose": "any maskable"
     }
   ],
-  "screenshots": [
-    {
-      "src": "screenshots/desktop.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "form_factor": "wide",
-      "label": "Vista de colecciÃ³n en escritorio"
-    },
-    {
-      "src": "screenshots/mobile.png",
-      "sizes": "390x844",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "Vista de colecciÃ³n en mÃ³vil"
-    }
-  ],
   "shortcuts": [
     {
-      "name": "AÃ±adir Ã­tem",
-      "short_name": "AÃ±adir",
-      "description": "Escanea un nuevo Ã­tem",
+      "name": "Añadir ítem",
+      "short_name": "Añadir",
+      "description": "Escanea un nuevo ítem",
       "url": "/?action=scan",
       "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
     },
     {
-      "name": "Mi colecciÃ³n",
-      "short_name": "ColecciÃ³n",
-      "description": "Ver toda tu colecciÃ³n",
+      "name": "Mi colección",
+      "short_name": "Colección",
+      "description": "Ver toda tu colección",
       "url": "/",
       "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
     }

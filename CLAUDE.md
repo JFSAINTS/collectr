@@ -242,5 +242,16 @@ git -C D:\CATALOGA push origin main
 - [ ] **Habilitar Google Auth** en Firebase Console → Authentication → Sign-in methods.
 - [ ] **Habilitar Facebook Auth** → requiere app en Meta Developers + configurar OAuth.
 - [ ] **Firestore Security Rules** — revisar `firestore.rules` antes de ir a producción.
-- [ ] **Iconos PWA** — la carpeta `icons/` necesita `icon-192.png` e `icon-512.png`.
+- [x] **Iconos PWA** — creados `icons/icon-192.png` e `icons/icon-512.png` (círculo púrpura generado con Python).
 - [ ] **CORS en Claude API** — las llamadas directas desde el browser fallarán en producción sin un proxy backend.
+
+---
+
+## Bugs corregidos (sesión 2026-05-26)
+
+- **sw.js rutas incorrectas**: tenía `/src/styles.css`, `/src/app.js`, etc. — no existe la carpeta `/src/`. Corregido a `/styles.css`, `/app.js`, etc.
+- **sw.js `cache.addAll` bloqueante**: si una URL daba 404 toda la instalación del SW fallaba silenciosamente. Cambiado a `Promise.allSettled` + `.catch` individual.
+- **manifest.json mojibake**: todos los textos españoles estaban triple-codificados. Reescrito con UTF-8 correcto.
+- **manifest.json screenshots**: referenciaba `screenshots/desktop.png` y `screenshots/mobile.png` que no existen. Eliminados.
+- **index.html script duplicado**: tenía `<script type="module" src="firebase-config.js">` además de `app.js`. El módulo ES ya es importado por `app.js`. Tag redundante eliminado.
+- **app.js doble spinner**: `analyzeWithClaude` pasaba `<div class="spinner"></div>` dentro del mensaje a `setStatus`, que ya añade su propio spinner. Eliminados los spinners redundantes del mensaje.
