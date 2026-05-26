@@ -874,11 +874,8 @@ async function analyzeImage(base64, statusId) {
       if (barcode) {
         result = { name: '', barcode, category: 'other', confidence: 'low' };
       } else {
-        const isApiError = e.message.includes('403') || e.message.includes('API');
-        setStatus(statusId, 'error',
-          isApiError
-            ? 'Cloud Vision API no habilitada — actívala en Google Cloud Console o añade el ítem manualmente.'
-            : 'No se pudo reconocer la imagen. Añade el ítem manualmente.');
+        setStatus(statusId, 'error', 'No se pudo reconocer la imagen. Añade el ítem manualmente.');
+        console.warn('[Vision]', e.message);
         document.getElementById('scan-result').style.display = 'block';
         return;
       }
