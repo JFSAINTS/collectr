@@ -523,8 +523,33 @@ window.startCamera = async () => {
     document.getElementById('start-cam-btn').style.display = 'none';
     document.getElementById('stop-cam-btn').style.display = '';
     document.getElementById('capture-btn').style.display = '';
-    setStatus('camera-status', 'info', 'Apunta al código de barras o portada y pulsa Capturar');
+    setStatus('camera-status', 'info', 'Apunta al código de barras o portada — detectando automáticamente...');
     enumerateCameras();
+    // Autoscan: tries to decode barcode every 1.5s automatically
+    if (window.autoscanInt) clearInterval(window.autoscanInt);
+    let _attempts = 0;
+    window.autoscanInt = setInterval(async () => {
+      if (!cameraStream) { clearInterval(window.autoscanInt); return; }
+      if (++_attempts > 20) { clearInterval(window.autoscanInt); return; } // stop after 30s
+      const _v = document.getElementById('camera-video');
+      const _cv = document.getElementById('camera-canvas');
+      if (!_v || !_v.videoWidth) return;
+      _cv.width = _v.videoWidth; _cv.height = _v.videoHeight;
+      _cv.getContext('2d').drawImage(_v, 0, 0);
+      const _b64 = _cv.toDataURL('image/jpeg', 0.85).split(',')[1];
+      try {
+        const _code = await decodeBarcodeFromImage(_b64);
+        if (_code) {
+          clearInterval(window.autoscanInt);
+          setStatus('camera-status', 'success', 'Código detectado: ' + _code + ' — buscando...');
+          if (navigator.vibrate) navigator.vibrate([100]);
+          stopCamera();
+          document.getElementById('image-preview').src = 'data:image/jpeg;base64,' + _b64;
+          document.getElementById('image-preview').style.display = 'block';
+          analyzeWithClaude(_b64, 'camera-status');
+        }
+      } catch(_e) {}
+    }, 1500);
   } catch(e) {
     setStatus('camera-status', 'error', 'Cámara no disponible. Usa la pestaña "Imagen" para subir una foto.');
   }
@@ -554,6 +579,7 @@ window.switchCamera = async () => {
 };
 
 window.stopCamera = () => {
+  if (window.autoscanInt) { clearInterval(window.autoscanInt); window.autoscanInt = null; }
   if (cameraStream) { cameraStream.getTracks().forEach(t => t.stop()); cameraStream = null; }
   const video = document.getElementById('camera-video');
   if (video) { video.style.display = 'none'; video.srcObject = null; }
@@ -600,65 +626,143 @@ function processImageFile(file) {
   reader.readAsDataURL(file);
 }
 
-// ===== CLAUDE AI ANALYSIS =====
-async function analyzeWithClaude(base64, statusId) {
-  setStatus(statusId, 'loading', 'Analizando con inteligencia artificial...');
-
-  const prompt = `Analiza esta imagen. Puede ser la portada o código de barras de un videojuego, película, DVD, Blu-ray, libro, cómic, música u otro producto coleccionable.
-
-Extrae toda la información visible y devuelve ÚNICAMENTE un objeto JSON válido sin texto adicional ni markdown:
-{
-  "name": "título completo del producto",
-  "category": "game|movie|dvd|bluray|book|comic|music|other",
-  "year": "año de lanzamiento o edición",
-  "platform": "plataforma o soporte físico (PS5, Xbox Series X, Nintendo Switch, PC, DVD, Blu-ray, 4K UHD, etc)",
-  "publisher": "editor, distribuidora, desarrolladora o estudio",
-  "genre": "género o géneros separados por comas",
-  "desc": "descripción breve del producto (máximo 2 frases)",
-  "barcode": "código de barras EAN/ISBN si es visible como número",
-  "confidence": "high|medium|low",
-  "notes": "información extra: edición especial, número de colección, clasificación por edad, etc"
+// ===== BARCODE DECODE (ZXing) =====
+async function decodeBarcodeFromImage(base64) {
+  try {
+    const img = new Image();
+    await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = 'data:image/jpeg;base64,' + base64; });
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width; canvas.height = img.height;
+    canvas.getContext('2d').drawImage(img, 0, 0);
+    const imageData = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height);
+    if (window.ZXing) {
+      const hints = new Map();
+      const formats = [ZXing.BarcodeFormat.EAN_13, ZXing.BarcodeFormat.EAN_8, ZXing.BarcodeFormat.UPC_A,
+        ZXing.BarcodeFormat.UPC_E, ZXing.BarcodeFormat.CODE_128, ZXing.BarcodeFormat.CODE_39, ZXing.BarcodeFormat.QR_CODE];
+      hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, formats);
+      hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+      const reader = new ZXing.MultiFormatReader();
+      reader.setHints(hints);
+      const lum = new ZXing.RGBLuminanceSource(imageData.data, canvas.width, canvas.height);
+      const bmp = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(lum));
+      const result = reader.decode(bmp);
+      if (result) return result.getText();
+    }
+  } catch(e) {}
+  return null;
 }
 
-Si es un código de barras sin imagen de portada, identifica el producto por el número si lo reconoces.
-Si no puedes identificar el producto, devuelve: {"error": "No identificado"}`;
+async function lookupBarcode(code) {
+  const apis = [
+    async (c) => {
+      const r = await fetch('https://openlibrary.org/api/books?bibkeys=ISBN:' + c + '&format=json&jscmd=data', { signal: AbortSignal.timeout(5000) });
+      const d = await r.json();
+      const key = 'ISBN:' + c;
+      if (!d[key]) return null;
+      const b = d[key];
+      const subjects = (b.subjects||[]).slice(0,3).map(s=>s.name||s).join(', ');
+      return { name: b.title, category: 'book', year: b.publish_date ? b.publish_date.match(/\d{4}/)?.[0] : '',
+        platform: b.physical_format || 'Tapa blanda', publisher: (b.publishers||[]).map(p=>p.name||p).join(', '),
+        genre: subjects, desc: '', cover: b.cover?.large || b.cover?.medium || '', barcode: c, confidence: 'high' };
+    },
+    async (c) => {
+      const r = await fetch('https://api.upcitemdb.com/prod/trial/lookup?upc=' + c, { signal: AbortSignal.timeout(5000) });
+      const d = await r.json();
+      if (!d.items?.length) return null;
+      const item = d.items[0];
+      return { name: item.title, category: guessCategory(item.title, item.category),
+        year: '', platform: guessPlatform(item.title, item.brand), publisher: item.brand || '',
+        genre: item.category || '', desc: item.description || '', cover: item.images?.[0] || '',
+        barcode: c, confidence: 'medium' };
+    }
+  ];
+  for (const api of apis) { try { const result = await api(code); if (result?.name) return result; } catch(e) {} }
+  return null;
+}
 
+function guessCategory(title, cat) {
+  const t = (title + ' ' + (cat||'')).toLowerCase();
+  if (/(blu.?ray|4k uhd|uhd)/.test(t)) return 'bluray';
+  if (/dvd/.test(t)) return 'dvd';
+  if (/(ps[1-5]|xbox|nintendo|switch|playstation|wii|gamecube|gameboy|3ds|ds|pc game|steam)/.test(t)) return 'game';
+  if (/(novel|book|isbn|hardcover|paperback|manga)/.test(t)) return 'book';
+  if (/(comic|comics|graphic novel)/.test(t)) return 'comic';
+  if (/(cd|album|vinyl|music|soundtrack)/.test(t)) return 'music';
+  if (/(film|movie|cinema|series|temporada|season)/.test(t)) return 'movie';
+  return 'other';
+}
+
+function guessPlatform(title, brand) {
+  const t = (title + ' ' + (brand||'')).toLowerCase();
+  if (/ps5/.test(t)) return 'PlayStation 5';
+  if (/ps4/.test(t)) return 'PlayStation 4';
+  if (/ps3/.test(t)) return 'PlayStation 3';
+  if (/xbox series/.test(t)) return 'Xbox Series X';
+  if (/xbox one/.test(t)) return 'Xbox One';
+  if (/switch/.test(t)) return 'Nintendo Switch';
+  if (/4k uhd/.test(t)) return '4K Blu-ray';
+  if (/blu.?ray/.test(t)) return 'Blu-ray';
+  if (/dvd/.test(t)) return 'DVD';
+  return '';
+}
+
+// ===== CLAUDE AI ANALYSIS =====
+async function analyzeWithClaude(base64, statusId) {
+  setStatus(statusId, 'loading', '<div class="spinner"></div> Decodificando código de barras...');
+  let result = null, barcode = null;
+
+  // Step 1: ZXing barcode decode + database lookup
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        messages: [{
-          role: 'user',
-          content: [
+    barcode = await decodeBarcodeFromImage(base64);
+    if (barcode) {
+      setStatus(statusId, 'loading', `<div class="spinner"></div> Código <b>${barcode}</b> — buscando en bases de datos...`);
+      result = await lookupBarcode(barcode);
+    }
+  } catch(e) {}
+
+  // Step 2: if not found via barcode, fall back to Claude Vision
+  if (!result?.name) {
+    setStatus(statusId, 'loading', `<div class="spinner"></div> ${barcode ? 'Código ' + barcode + ' no encontrado — ' : ''}Analizando portada con IA...`);
+    const prompt = `Analiza esta imagen. Puede ser la portada o código de barras de un videojuego, película, DVD, Blu-ray, libro, cómic, música u otro producto coleccionable.${barcode ? ' El código de barras detectado es: ' + barcode : ''}
+
+Devuelve ÚNICAMENTE un objeto JSON sin markdown:
+{"name":"título","category":"game|movie|dvd|bluray|book|comic|music|other","year":"año","platform":"plataforma","publisher":"editor","genre":"géneros","desc":"descripción breve","barcode":"código","confidence":"high|medium|low"}
+
+Si no puedes identificar el producto devuelve: {"error":"No identificado"}`;
+    try {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          messages: [{ role: 'user', content: [
             { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: base64 } },
             { type: 'text', text: prompt }
-          ]
-        }]
-      })
-    });
-
-    const data = await response.json();
-    if (data.error) throw new Error(data.error.message);
-    const text = data.content.map(b => b.text || '').join('');
-    const clean = text.replace(/```json|```/g, '').trim();
-    let parsed;
-    try { parsed = JSON.parse(clean); }
-    catch(e2) { const m = clean.match(/\{[\s\S]*\}/); if(m) parsed = JSON.parse(m[0]); else throw new Error('Respuesta inválida'); }
-
-    if (parsed.error) {
-      setStatus(statusId, 'error', 'No se pudo identificar el producto. Puedes añadirlo manualmente.');
-      document.getElementById('scan-result').style.display = 'block';
-      return;
+          ]}]
+        })
+      });
+      const data = await response.json();
+      if (data.error) throw new Error(data.error.message);
+      const text = data.content.map(b => b.text || '').join('');
+      const clean = text.replace(/```json|```/g, '').trim();
+      try { result = JSON.parse(clean); }
+      catch(e2) { const m = clean.match(/\{[\s\S]*\}/); if(m) result = JSON.parse(m[0]); else throw new Error('JSON inválido'); }
+      if (result?.error) {
+        if (barcode) result = { name: '', barcode, category: 'other', year: '', platform: '', publisher: '', genre: '', desc: '', confidence: 'low' };
+        else { setStatus(statusId, 'error', 'No se pudo identificar. Añádelo manualmente.'); document.getElementById('scan-result').style.display = 'block'; return; }
+      }
+    } catch(e) {
+      if (barcode) result = { name: '', barcode, category: 'other', confidence: 'low' };
+      else { setStatus(statusId, 'error', 'Error de análisis. Puedes editar los campos manualmente.'); document.getElementById('scan-result').style.display = 'block'; return; }
     }
+  }
 
-    fillResultForm(parsed);
-    setStatus(statusId, 'success', `Detectado: "${parsed.name}" · Confianza: ${parsed.confidence || 'alta'}`);
-  } catch(e) {
-    setStatus(statusId, 'error', 'Error de análisis. Puedes editar los campos manualmente a continuación.');
-    document.getElementById('scan-result').style.display = 'block';
+  // Show result
+  if (result?.name || barcode) {
+    if (barcode && !result.barcode) result.barcode = barcode;
+    fillResultForm(result);
+    setStatus(statusId, 'success', result.name ? `Detectado: "${result.name}" · Confianza: ${result.confidence || 'alta'}` : `Código: ${barcode} — completa los datos manualmente`);
   }
 }
 
