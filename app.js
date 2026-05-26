@@ -718,7 +718,7 @@ function guessPlatform(title, brand) {
 // ===== GOOGLE VISION (GOOGLE LENS) IMAGE RECOGNITION =====
 // Uses the same Firebase/Google API key — requires Cloud Vision API enabled in the project:
 // https://console.cloud.google.com/apis/library/vision.googleapis.com?project=collectr-4ecb9
-const GOOGLE_API_KEY = 'AIzaSyBGz85M4pcshA4_ooJX9sCK4Kf9KfBHjXQ';
+const GOOGLE_API_KEY = 'AIzaSyDoKpVJfgsBcC_5DyJve0M3LUnoqTXb8r8';
 
 async function callGoogleVision(base64) {
   const r = await fetch(

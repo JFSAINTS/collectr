@@ -139,9 +139,10 @@ const firebaseConfig = {
 
 Si ninguna fuente encuentra resultado → el usuario completa manualmente.
 
-**Google Vision API key:** `AIzaSyBGz85M4pcshA4_ooJX9sCK4Kf9KfBHjXQ` (misma que Firebase)
-⚠️ **Requiere habilitar Cloud Vision API** en Google Cloud Console:
-https://console.cloud.google.com/apis/library/vision.googleapis.com?project=collectr-4ecb9
+**Google Vision API key:** `AIzaSyDoKpVJfgsBcC_5DyJve0M3LUnoqTXb8r8` (key dedicada para Vision API)
+- ✅ Cloud Vision API habilitada y con billing activo en proyecto `collectr-4ecb9`
+- Restricciones de referrer: `https://jfsaints.github.io/*` y `http://localhost:3456/*`
+- Free tier: 1.000 imágenes/mes gratis
 
 ---
 
