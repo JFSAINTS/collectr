@@ -207,12 +207,12 @@ function saveLocalDB() {
 
 function seedDemo() {
   DB = [
-    { id: gid(), name: 'The Last of Us Part II', category: 'game', platform: 'PlayStation 4', publisher: 'Naughty Dog', year: '2020', genre: 'Acción / Aventura', desc: 'Una historia épica de supervivencia y redención.', cover: '', barcode: '', rating: 5, wishlist: false, added: new Date(2024,0,15).toISOString() },
-    { id: gid(), name: 'Dune: Parte Dos', category: 'bluray', platform: '4K Blu-ray', publisher: 'Warner Bros', year: '2024', genre: 'Ciencia Ficción', desc: 'La épica continuación en Arrakis.', cover: '', barcode: '', rating: 5, wishlist: false, added: new Date(2024,3,2).toISOString() },
-    { id: gid(), name: 'Elden Ring', category: 'game', platform: 'PlayStation 5', publisher: 'FromSoftware', year: '2022', genre: 'RPG / Acción', desc: 'RPG de mundo abierto de From Software y George R.R. Martin.', cover: '', barcode: '', rating: 5, wishlist: false, added: new Date(2024,1,20).toISOString() },
-    { id: gid(), name: 'Dune (Frank Herbert)', category: 'book', platform: 'Tapa dura', publisher: 'Debolsillo', year: '1965', genre: 'Ciencia Ficción', desc: 'La novela seminal de ciencia ficción.', cover: '', barcode: '', rating: 5, wishlist: false, added: new Date(2024,2,8).toISOString() },
-    { id: gid(), name: 'Oppenheimer', category: 'bluray', platform: 'Blu-ray', publisher: 'Universal', year: '2023', genre: 'Drama / Historia', desc: 'La historia del padre de la bomba atómica.', cover: '', barcode: '', rating: 4, wishlist: false, added: new Date(2024,4,1).toISOString() },
-    { id: gid(), name: 'Ghost of Tsushima', category: 'game', platform: 'PlayStation 5', publisher: 'Sucker Punch', year: '2020', genre: 'Acción / Aventura', desc: '', cover: '', barcode: '', rating: 0, wishlist: true, added: new Date(2024,5,10).toISOString() }
+    { id: gid(), name: 'The Last of Us Part II', category: 'game', platform: 'PlayStation 4', publisher: 'Naughty Dog', year: '2020', genre: 'Acción / Aventura', desc: 'Una historia épica de supervivencia y redención.', notas: '', cover: '', barcode: '', rating: 5, estado: 'tengo', wishlist: false, added: new Date(2024,0,15).toISOString() },
+    { id: gid(), name: 'Dune: Parte Dos', category: 'bluray', platform: '4K Blu-ray', publisher: 'Warner Bros', year: '2024', genre: 'Ciencia Ficción', desc: 'La épica continuación en Arrakis.', notas: '', cover: '', barcode: '', rating: 5, estado: 'tengo', wishlist: false, added: new Date(2024,3,2).toISOString() },
+    { id: gid(), name: 'Elden Ring', category: 'game', platform: 'PlayStation 5', publisher: 'FromSoftware', year: '2022', genre: 'RPG / Acción', desc: 'RPG de mundo abierto de From Software y George R.R. Martin.', notas: '', cover: '', barcode: '', rating: 5, estado: 'tengo', wishlist: false, added: new Date(2024,1,20).toISOString() },
+    { id: gid(), name: 'Dune (Frank Herbert)', category: 'book', platform: 'Tapa dura', publisher: 'Debolsillo', year: '1965', genre: 'Ciencia Ficción', desc: 'La novela seminal de ciencia ficción.', notas: '', cover: '', barcode: '', rating: 5, estado: 'tengo', wishlist: false, added: new Date(2024,2,8).toISOString() },
+    { id: gid(), name: 'Oppenheimer', category: 'bluray', platform: 'Blu-ray', publisher: 'Universal', year: '2023', genre: 'Drama / Historia', desc: 'La historia del padre de la bomba atómica.', notas: '', cover: '', barcode: '', rating: 4, estado: 'tengo', wishlist: false, added: new Date(2024,4,1).toISOString() },
+    { id: gid(), name: 'Ghost of Tsushima', category: 'game', platform: 'PlayStation 5', publisher: 'Sucker Punch', year: '2020', genre: 'Acción / Aventura', desc: '', notas: '', cover: '', barcode: '', rating: 0, estado: 'quiero', wishlist: true, added: new Date(2024,5,10).toISOString() }
   ];
   saveLocalDB();
 }
@@ -329,7 +329,7 @@ function renderList(items, container) {
 }
 
 function renderCategories() {
-  const cats = ['game','movie','dvd','bluray','book','comic','music','other'];
+  const cats = ['game','movie','dvd','bluray','book','comic','manga','music','boardgame','figure','other'];
   document.getElementById('cat-grid').innerHTML = cats.map(cat => {
     const ci = CAT_INFO[cat];
     const count = DB.filter(x => x.category === cat && !x.wishlist).length;
@@ -380,7 +380,7 @@ function renderStatsPage() {
   const topPlatforms = Object.entries(byPlatform).sort((a,b) => b[1]-a[1]).slice(0,8);
   const topYears = Object.entries(byYear).sort((a,b) => a[0]-b[0]).slice(-10);
 
-  const catColors = { game:'#7c6af7', movie:'#f5c842', dvd:'#3b82f6', bluray:'#0ea5e9', book:'#22c55e', comic:'#ef4444', music:'#ec4899', other:'#94a3b8' };
+  const catColors = { game:'#7c6af7', movie:'#f5c842', dvd:'#3b82f6', bluray:'#0ea5e9', book:'#22c55e', comic:'#ef4444', manga:'#fb923c', music:'#ec4899', boardgame:'#10b981', figure:'#d97706', other:'#94a3b8' };
   const catRows = Object.entries(byCat).sort((a,b) => b[1]-a[1]).map(([cat, count]) => {
     const ci = CAT_INFO[cat] || CAT_INFO.other;
     const pct = Math.round(count/total*100);
@@ -1087,9 +1087,6 @@ window.selectManualEntry = () => {
   document.getElementById('scan-result').style.display = 'block';
 };
 
-
-
-
 function fillResultForm(data) {
   const fields = {
     'r-name': data.name, 'r-year': data.year, 'r-platform': data.platform,
@@ -1265,6 +1262,7 @@ window.openDetail = (id) => {
           ${mf('Código', item.barcode)}
           ${mf('Añadido', added)}
           ${item.desc ? `<div class="detail-desc">${esc(item.desc)}</div>` : ''}
+          ${item.notas ? `<div class="detail-desc" style="border-left:2px solid var(--accent);padding-left:0.75rem;margin-top:0.5rem"><span style="font-size:0.68rem;color:var(--text3);display:block;margin-bottom:3px">NOTAS PERSONALES</span>${esc(item.notas)}</div>` : ''}
         </div>
       </div>
     </div>`;
