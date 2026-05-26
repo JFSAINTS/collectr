@@ -483,8 +483,9 @@ function resetScannerForm() {
    'm-name','m-year','m-platform','m-publisher','m-genre','m-notes','m-cover','m-barcode'].forEach(id => {
     const el = document.getElementById(id); if(el) el.value = '';
   });
-  const rcp = document.getElementById('r-cover-preview'); if(rcp) rcp.style.display = 'none';
-  const mcp = document.getElementById('m-cover-preview'); if(mcp) mcp.style.display = 'none';
+  const rcp = document.getElementById('r-cover-preview'); if(rcp) { rcp.style.display = 'none'; rcp.src = ''; }
+  const mcp = document.getElementById('m-cover-preview'); if(mcp) { mcp.style.display = 'none'; mcp.src = ''; }
+  const slot = document.getElementById('detection-banner-slot'); if(slot) slot.innerHTML = '';
   document.getElementById('image-preview').style.display = 'none';
   const ep = document.getElementById('extra-fields-panel');
   const ei = document.getElementById('extra-toggle-icon');
@@ -748,32 +749,36 @@ async function callGoogleVision(base64) {
 }
 
 function parseVisionResult(webDetection, labels) {
-  // Best guess from Google (e.g. "the last of us part ii ps4")
-  const bestGuess = (webDetection.bestGuessLabels?.[0]?.label || '').trim();
+  // Best guess from Google — only if western text
+  const rawGuess = (webDetection.bestGuessLabels?.[0]?.label || '').trim();
+  const bestGuess = isWesternText(rawGuess) ? rawGuess : '';
 
-  // Web entities sorted by confidence score
+  // Web entities: filter by score AND western alphabet only
   const entities = (webDetection.webEntities || [])
-    .filter(e => e.description && (e.score || 0) > 0.35)
+    .filter(e => e.description && (e.score || 0) > 0.35 && isWesternText(e.description))
     .sort((a, b) => (b.score || 0) - (a.score || 0));
 
-  // All descriptive text for detection
+  // All descriptive text for category/platform detection
   const allText = [
     bestGuess,
     ...entities.map(e => e.description || ''),
     ...labels.map(l => l.description || '')
   ].join(' ').toLowerCase();
 
-  // Product name: prefer best guess, fall back to top entity
+  // Product name: best guess first, fall back to top western entity
   let name = (bestGuess || entities[0]?.description || '').trim();
-  // Strip trailing platform tokens often appended by Google (e.g. "...ps4", "...switch")
-  name = name.replace(/\s+(ps[1-5]|xbox(\s+\w+)?|switch|nintendo\s+\w+|4k|uhd|blu[\-\s]?ray|dvd|steam|pc)\s*$/i, '').trim();
-  // Title-case
+  // Strip trailing platform tokens appended by Google ("...ps4", "...switch", etc.)
+  name = name.replace(/\s+(ps[1-5]|xbox(\s+\w+)?|switch|nintendo\s+\w+|4k\s*uhd?|uhd|blu[\-\s]?ray|dvd|steam|pc)\s*$/i, '').trim();
+  // Title-case each word
   name = name.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 
   const category = guessCategory(name, allText);
   const platform = detectPlatformFromText(allText);
   const publisher = detectPublisherFromEntities(entities, name);
   const yearMatch = entities.map(e => e.description || '').join(' ').match(/\b(19[5-9]\d|20[0-3]\d)\b/);
+
+  // Cover image from Vision's web image matches
+  const cover = extractCoverFromVision(webDetection);
 
   return {
     name,
@@ -784,8 +789,33 @@ function parseVisionResult(webDetection, labels) {
     genre: '',
     desc: '',
     barcode: '',
+    cover,
     confidence: (entities[0]?.score || 0) > 0.7 ? 'high' : (entities[0]?.score || 0) > 0.45 ? 'medium' : 'low'
   };
+}
+
+function isWesternText(str) {
+  if (!str || str.length < 2) return true;
+  // Count Latin/Western Unicode characters (Basic Latin, Latin Extended, diacritics, digits, common punctuation)
+  const western = (str.match(/[ -ɏḀ-ỿ0-9\s\-:'"!?.,()&]/g) || []).length;
+  return (western / str.length) > 0.55;
+}
+
+function extractCoverFromVision(webDetection) {
+  // Prefer exact image matches found on the web (same cover art)
+  const sources = [
+    ...(webDetection.fullMatchingImages || []),
+    ...(webDetection.partialMatchingImages || []),
+    ...(webDetection.visuallySimilarImages || [])
+  ];
+  for (const img of sources) {
+    const url = img.url || '';
+    // Skip Google's encrypted thumbnail cache (low quality, CDN-unstable)
+    if (url && !url.includes('encrypted-tbn') && !url.includes('gstatic.com/images')) {
+      return url;
+    }
+  }
+  return '';
 }
 
 function detectPlatformFromText(t) {
@@ -898,10 +928,47 @@ async function analyzeImage(base64, statusId) {
 }
 
 function fillResultForm(data) {
-  const fields = { 'r-name': data.name, 'r-year': data.year, 'r-platform': data.platform, 'r-publisher': data.publisher, 'r-genre': data.genre, 'r-desc': data.desc || data.notes, 'r-barcode': data.barcode };
+  const fields = {
+    'r-name': data.name, 'r-year': data.year, 'r-platform': data.platform,
+    'r-publisher': data.publisher, 'r-genre': data.genre,
+    'r-desc': data.desc || data.notes, 'r-barcode': data.barcode,
+    'r-cover': data.cover
+  };
   Object.entries(fields).forEach(([id, val]) => { const el = document.getElementById(id); if(el) el.value = val || ''; });
+
+  // Auto-show cover preview when Vision returns a URL
+  const rcp = document.getElementById('r-cover-preview');
+  if (rcp) { rcp.src = data.cover || ''; rcp.style.display = data.cover ? 'block' : 'none'; }
+
   const catSel = document.getElementById('r-cat');
   if (data.category && catSel.querySelector(`option[value="${data.category}"]`)) catSel.value = data.category;
+
+  // Detection confirmation banner — shows cover thumb + name + category + confidence
+  const slot = document.getElementById('detection-banner-slot');
+  if (slot) {
+    if (data.name) {
+      const ci = CAT_INFO[data.category] || CAT_INFO.other;
+      const confLabel = data.confidence === 'high' ? 'alta' : data.confidence === 'medium' ? 'media' : 'baja';
+      const coverHtml = data.cover
+        ? `<img src="${esc(data.cover)}" alt="" onerror="this.style.display='none';this.parentElement.textContent='${ci.emoji}'">`
+        : ci.emoji;
+      slot.innerHTML = `<div class="detection-banner">
+        <div class="detection-banner-cover">${coverHtml}</div>
+        <div class="detection-banner-info">
+          <div class="detection-banner-name">${esc(data.name)}</div>
+          <div class="detection-banner-meta">
+            <span class="item-badge ${ci.badgeClass}" style="position:static;display:inline-block">${ci.label}</span>
+            ${data.platform ? `<span style="font-size:0.72rem;color:var(--text3)">${esc(data.platform)}</span>` : ''}
+            <span class="detection-confidence">Confianza: ${confLabel}</span>
+          </div>
+        </div>
+        <i class="ti ti-circle-check detection-check" aria-hidden="true"></i>
+      </div>`;
+    } else {
+      slot.innerHTML = '';
+    }
+  }
+
   document.getElementById('scan-result').style.display = 'block';
 }
 
