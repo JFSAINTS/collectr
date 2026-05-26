@@ -1,3 +1,6 @@
+# API keys — never commit this file
+api-config.js
+
 # Backup files (redundant once git tracks history)
 files/
 files.zip

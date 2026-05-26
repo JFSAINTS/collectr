@@ -24,17 +24,21 @@ let deferredInstallPrompt = null;
 let unsubscribeFirestore = null;
 let syncTimeout = null;
 let isGuest = false;
+let scanMode = null; // 'barcode' | 'photo'
 
 // ===== CATEGORY CONFIG =====
 const CAT_INFO = {
-  game:   { label: 'Videojuego', icon: 'ti-device-gamepad-2', badgeClass: 'badge-game',   emoji: '🎮' },
-  movie:  { label: 'Película',   icon: 'ti-movie',            badgeClass: 'badge-movie',  emoji: '🎬' },
-  dvd:    { label: 'DVD',        icon: 'ti-disc',             badgeClass: 'badge-dvd',    emoji: '💿' },
-  bluray: { label: 'Blu-ray',    icon: 'ti-disc',             badgeClass: 'badge-bluray', emoji: '💎' },
-  book:   { label: 'Libro',      icon: 'ti-book',             badgeClass: 'badge-book',   emoji: '📚' },
-  comic:  { label: 'Cómic',      icon: 'ti-books',            badgeClass: 'badge-comic',  emoji: '🦸' },
-  music:  { label: 'Música',     icon: 'ti-music',            badgeClass: 'badge-music',  emoji: '🎵' },
-  other:  { label: 'Otro',       icon: 'ti-package',          badgeClass: 'badge-other',  emoji: '📦' }
+  game:      { label: 'Videojuego',    icon: 'ti-device-gamepad-2', badgeClass: 'badge-game',      emoji: '🎮' },
+  movie:     { label: 'Película',      icon: 'ti-movie',            badgeClass: 'badge-movie',     emoji: '🎬' },
+  dvd:       { label: 'DVD',           icon: 'ti-disc',             badgeClass: 'badge-dvd',       emoji: '💿' },
+  bluray:    { label: 'Blu-ray',       icon: 'ti-disc',             badgeClass: 'badge-bluray',    emoji: '💎' },
+  book:      { label: 'Libro',         icon: 'ti-book',             badgeClass: 'badge-book',      emoji: '📚' },
+  comic:     { label: 'Cómic',         icon: 'ti-books',            badgeClass: 'badge-comic',     emoji: '🦸' },
+  manga:     { label: 'Manga',         icon: 'ti-book-2',           badgeClass: 'badge-manga',     emoji: '📖' },
+  music:     { label: 'Música',        icon: 'ti-music',            badgeClass: 'badge-music',     emoji: '🎵' },
+  boardgame: { label: 'Juego de mesa', icon: 'ti-chess',            badgeClass: 'badge-boardgame', emoji: '🎲' },
+  figure:    { label: 'Figurita',      icon: 'ti-diamond',          badgeClass: 'badge-figure',    emoji: '🗿' },
+  other:     { label: 'Otro',          icon: 'ti-package',          badgeClass: 'badge-other',     emoji: '📦' }
 };
 
 // ===== AUTH =====
@@ -240,7 +244,7 @@ function updateStats() {
   document.getElementById('st-total').textContent = owned.length;
   document.getElementById('st-games').textContent = owned.filter(x => x.category === 'game').length;
   document.getElementById('st-movies').textContent = owned.filter(x => ['movie','dvd','bluray'].includes(x.category)).length;
-  document.getElementById('st-books').textContent = owned.filter(x => ['book','comic'].includes(x.category)).length;
+  document.getElementById('st-books').textContent = owned.filter(x => ['book','comic','manga'].includes(x.category)).length;
   document.getElementById('items-count-sub') && (document.getElementById('items-count-sub').textContent = DB.length + ' ítems');
 }
 
@@ -479,13 +483,21 @@ function resetScannerForm() {
   document.getElementById('scan-result').style.display = 'none';
   document.getElementById('camera-status').innerHTML = '';
   document.getElementById('image-status').innerHTML = '';
-  ['r-name','r-year','r-platform','r-publisher','r-genre','r-desc','r-cover','r-barcode',
+  ['r-name','r-year','r-platform','r-publisher','r-genre','r-desc','r-notas','r-cover','r-barcode',
    'm-name','m-year','m-platform','m-publisher','m-genre','m-notes','m-cover','m-barcode'].forEach(id => {
     const el = document.getElementById(id); if(el) el.value = '';
   });
   const rcp = document.getElementById('r-cover-preview'); if(rcp) { rcp.style.display = 'none'; rcp.src = ''; }
   const mcp = document.getElementById('m-cover-preview'); if(mcp) { mcp.style.display = 'none'; mcp.src = ''; }
   const slot = document.getElementById('detection-banner-slot'); if(slot) slot.innerHTML = '';
+  const srSlot = document.getElementById('search-results-slot'); if(srSlot) srSlot.innerHTML = '';
+  const rEstado = document.getElementById('r-estado'); if(rEstado) rEstado.value = 'tengo';
+  const mEstado = document.getElementById('m-estado'); if(mEstado) mEstado.value = 'tengo';
+  // Reset scan mode
+  scanMode = null;
+  const sbBtn = document.getElementById('scan-mode-barcode'); if(sbBtn) sbBtn.classList.remove('active');
+  const spBtn = document.getElementById('scan-mode-photo');   if(spBtn) spBtn.classList.remove('active');
+  window._searchResults = [];
   document.getElementById('image-preview').style.display = 'none';
   const ep = document.getElementById('extra-fields-panel');
   const ei = document.getElementById('extra-toggle-icon');
@@ -523,43 +535,19 @@ window.startCamera = async () => {
     document.getElementById('scan-overlay').style.display = 'flex';
     document.getElementById('start-cam-btn').style.display = 'none';
     document.getElementById('stop-cam-btn').style.display = '';
-    document.getElementById('capture-btn').style.display = '';
-    setStatus('camera-status', 'info', 'Apunta a la portada del producto — se detecta automáticamente...');
+    // Capture button only visible in photo mode
+    const capBtn = document.getElementById('capture-btn');
+    if (capBtn) capBtn.style.display = scanMode === 'photo' ? '' : 'none';
     enumerateCameras();
-    // Autoscan: barcode first, fallback to Google Vision after 5 attempts (~7.5s)
-    if (window.autoscanInt) clearInterval(window.autoscanInt);
-    let _attempts = 0;
-    window.autoscanInt = setInterval(async () => {
-      if (!cameraStream) { clearInterval(window.autoscanInt); return; }
-      const _v = document.getElementById('camera-video');
-      const _cv = document.getElementById('camera-canvas');
-      if (!_v || !_v.videoWidth) return;
-      _cv.width = _v.videoWidth; _cv.height = _v.videoHeight;
-      _cv.getContext('2d').drawImage(_v, 0, 0);
-      const _b64 = _cv.toDataURL('image/jpeg', 0.85).split(',')[1];
-      try {
-        const _code = await decodeBarcodeFromImage(_b64);
-        if (_code) {
-          clearInterval(window.autoscanInt);
-          setStatus('camera-status', 'success', 'Código detectado: ' + _code + ' — buscando...');
-          if (navigator.vibrate) navigator.vibrate([100]);
-          stopCamera();
-          document.getElementById('image-preview').src = 'data:image/jpeg;base64,' + _b64;
-          document.getElementById('image-preview').style.display = 'block';
-          analyzeImage(_b64, 'camera-status');
-          return;
-        }
-      } catch(_e) {}
-      // After 5 barcode attempts (~7.5s), auto-capture and use Google Vision
-      if (++_attempts >= 5) {
-        clearInterval(window.autoscanInt);
-        setStatus('camera-status', 'info', 'Sin código — reconociendo portada con Google Lens...');
-        stopCamera();
-        document.getElementById('image-preview').src = 'data:image/jpeg;base64,' + _b64;
-        document.getElementById('image-preview').style.display = 'block';
-        analyzeImage(_b64, 'camera-status');
-      }
-    }, 1500);
+    // Start the appropriate scan loop if a mode is already selected
+    if (scanMode === 'barcode') {
+      startBarcodeAutoscan();
+      setStatus('camera-status', 'info', 'Modo código de barras — apunta al código EAN/ISBN...');
+    } else if (scanMode === 'photo') {
+      setStatus('camera-status', 'info', 'Encuadra la portada y pulsa Capturar cuando esté nítida.');
+    } else {
+      setStatus('camera-status', 'info', 'Cámara activa — elige el modo de escaneo arriba.');
+    }
   } catch(e) {
     setStatus('camera-status', 'error', 'Cámara no disponible. Usa la pestaña "Imagen" para subir una foto.');
   }
@@ -589,7 +577,7 @@ window.switchCamera = async () => {
 };
 
 window.stopCamera = () => {
-  if (window.autoscanInt) { clearInterval(window.autoscanInt); window.autoscanInt = null; }
+  stopBarcodeAutoscan();
   if (cameraStream) { cameraStream.getTracks().forEach(t => t.stop()); cameraStream = null; }
   const video = document.getElementById('camera-video');
   if (video) { video.style.display = 'none'; video.srcObject = null; }
@@ -604,15 +592,34 @@ window.captureFrame = () => {
   const video = document.getElementById('camera-video');
   const canvas = document.getElementById('camera-canvas');
   if (!video.videoWidth) { setStatus('camera-status','error','La cámara aún no está lista'); return; }
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
+  canvas.width = video.videoWidth; canvas.height = video.videoHeight;
   canvas.getContext('2d').drawImage(video, 0, 0);
   const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
   pendingImageData = dataUrl.split(',')[1];
   stopCamera();
   document.getElementById('image-preview').src = dataUrl;
   document.getElementById('image-preview').style.display = 'block';
-  analyzeImage(pendingImageData, 'camera-status');
+  if (scanMode === 'photo') {
+    identifyByPhoto(pendingImageData, 'camera-status');
+  } else {
+    // Barcode mode: manual capture — decode then lookup
+    setStatus('camera-status', 'loading', 'Leyendo código de barras...');
+    decodeBarcodeFromImage(pendingImageData).then(async code => {
+      if (code) {
+        const result = await identifyByBarcode(code, 'camera-status');
+        if (result?.name) {
+          fillResultForm(result);
+          setStatus('camera-status', 'success', `Identificado: <b>${esc(result.name)}</b>`);
+        } else {
+          fillResultForm({ name: '', barcode: code, category: 'other', confidence: 'low' });
+          setStatus('camera-status', 'info', `Código ${code} sin resultados. Completa los datos manualmente.`);
+        }
+      } else {
+        setStatus('camera-status', 'info', 'No se detectó código. Cambia a modo "Foto de portada" para identificar por imagen.');
+        document.getElementById('scan-result').style.display = 'block';
+      }
+    });
+  }
 };
 
 // ===== IMAGE UPLOAD =====
@@ -631,7 +638,22 @@ function processImageFile(file) {
     document.getElementById('image-preview').src = dataUrl;
     document.getElementById('image-preview').style.display = 'block';
     pendingImageData = dataUrl.split(',')[1];
-    analyzeImage(pendingImageData, 'image-status');
+    // Try barcode first; if not found, fall back to OCR
+    setStatus('image-status', 'loading', 'Buscando código de barras...');
+    decodeBarcodeFromImage(pendingImageData).then(async code => {
+      if (code) {
+        const result = await identifyByBarcode(code, 'image-status');
+        if (result?.name) {
+          fillResultForm(result);
+          setStatus('image-status', 'success', `Identificado: <b>${esc(result.name)}</b>`);
+        } else {
+          fillResultForm({ name: '', barcode: code, category: 'other', confidence: 'low' });
+          setStatus('image-status', 'info', `Código ${code} sin resultados en bases de datos. Completa los datos manualmente.`);
+        }
+      } else {
+        identifyByPhoto(pendingImageData, 'image-status');
+      }
+    });
   };
   reader.readAsDataURL(file);
 }
@@ -692,13 +714,19 @@ async function lookupBarcode(code) {
 
 function guessCategory(title, cat) {
   const t = (title + ' ' + (cat||'')).toLowerCase();
+  // Manga — check before book/comic
+  if (/(manga|shonen|shojo|seinen|josei|manhwa|manhua|one piece|naruto|dragon ball|attack on titan|demon slayer|jujutsu|berserk|chainsaw|jojo)/.test(t)) return 'manga';
+  // Board games
+  if (/(board.?game|juego.?de.?mesa|tabletop|tabletero|catan|pandemic|dungeons|d&d|warhammer|magic.?gathering|hearthstone|dominion)/.test(t)) return 'boardgame';
+  // Figures / collectibles
+  if (/(figure|figurine|nendoroid|funko.?pop|pop!|statuette|statue|action.?figure|figma|figurita|diorama)/.test(t)) return 'figure';
   if (/(blu.?ray|4k uhd|uhd)/.test(t)) return 'bluray';
   if (/dvd/.test(t)) return 'dvd';
-  if (/(ps[1-5]|xbox|nintendo|switch|playstation|wii|gamecube|gameboy|3ds|ds|pc game|steam)/.test(t)) return 'game';
-  if (/(novel|book|isbn|hardcover|paperback|manga)/.test(t)) return 'book';
-  if (/(comic|comics|graphic novel)/.test(t)) return 'comic';
-  if (/(cd|album|vinyl|music|soundtrack)/.test(t)) return 'music';
-  if (/(film|movie|cinema|series|temporada|season)/.test(t)) return 'movie';
+  if (/(ps[1-5]|xbox|nintendo|switch|playstation|wii|gamecube|gameboy|3ds|\bds\b|pc game|steam|videojuego)/.test(t)) return 'game';
+  if (/(comic|comics|graphic novel|grapa|tebeo|dc comics|marvel comics)/.test(t)) return 'comic';
+  if (/(novel|book|isbn|hardcover|paperback|novela|libro)/.test(t)) return 'book';
+  if (/(cd|album|vinyl|music|soundtrack|disco|vinilo|lp\b)/.test(t)) return 'music';
+  if (/(film|movie|cinema|series|temporada|season|película|serie\b)/.test(t)) return 'movie';
   return 'other';
 }
 
@@ -716,25 +744,148 @@ function guessPlatform(title, brand) {
   return '';
 }
 
-// ===== GOOGLE VISION (GOOGLE LENS) IMAGE RECOGNITION =====
-// Uses the same Firebase/Google API key — requires Cloud Vision API enabled in the project:
-// https://console.cloud.google.com/apis/library/vision.googleapis.com?project=collectr-4ecb9
+// =============================================
+// MODO DE ESCANEO — selección explícita por el usuario
+// =============================================
 const GOOGLE_API_KEY = 'AIzaSyDoKpVJfgsBcC_5DyJve0M3LUnoqTXb8r8';
 
-async function callGoogleVision(base64) {
+window.setScanMode = (mode) => {
+  scanMode = mode;
+  const bBtn = document.getElementById('scan-mode-barcode');
+  const pBtn = document.getElementById('scan-mode-photo');
+  if (bBtn) bBtn.classList.toggle('active', mode === 'barcode');
+  if (pBtn) pBtn.classList.toggle('active', mode === 'photo');
+  const capBtn = document.getElementById('capture-btn');
+  if (capBtn) capBtn.style.display = mode === 'photo' ? '' : 'none';
+
+  if (!cameraStream) {
+    startCamera();
+  } else {
+    if (mode === 'barcode') {
+      stopBarcodeAutoscan();
+      startBarcodeAutoscan();
+      setStatus('camera-status', 'info', 'Modo código de barras — apunta al código EAN/ISBN...');
+    } else {
+      stopBarcodeAutoscan();
+      setStatus('camera-status', 'info', 'Modo portada — encuadra el producto y pulsa Capturar.');
+    }
+  }
+};
+
+function startBarcodeAutoscan() {
+  stopBarcodeAutoscan();
+  window.autoscanInt = setInterval(async () => {
+    if (!cameraStream || scanMode !== 'barcode') { clearInterval(window.autoscanInt); return; }
+    const v = document.getElementById('camera-video');
+    const c = document.getElementById('camera-canvas');
+    if (!v?.videoWidth) return;
+    c.width = v.videoWidth; c.height = v.videoHeight;
+    c.getContext('2d').drawImage(v, 0, 0);
+    const b64 = c.toDataURL('image/jpeg', 0.85).split(',')[1];
+    try {
+      const code = await decodeBarcodeFromImage(b64);
+      if (code) {
+        stopBarcodeAutoscan();
+        if (navigator.vibrate) navigator.vibrate([100]);
+        setStatus('camera-status', 'loading', `Código <b>${code}</b> detectado — buscando...`);
+        stopCamera();
+        document.getElementById('image-preview').src = 'data:image/jpeg;base64,' + b64;
+        document.getElementById('image-preview').style.display = 'block';
+        const result = await identifyByBarcode(code, 'camera-status');
+        if (result?.name) {
+          fillResultForm(result);
+          setStatus('camera-status', 'success', `Identificado: <b>${esc(result.name)}</b>`);
+        } else {
+          fillResultForm({ name: '', barcode: code, category: 'other', confidence: 'low' });
+          setStatus('camera-status', 'info', `Código ${code} sin resultados. Completa los datos manualmente.`);
+        }
+      }
+    } catch(_e) {}
+  }, 800);
+}
+
+function stopBarcodeAutoscan() {
+  if (window.autoscanInt) { clearInterval(window.autoscanInt); window.autoscanInt = null; }
+}
+
+// =============================================
+// IDENTIFICACIÓN POR CÓDIGO DE BARRAS
+// ISBN (978/979) → Google Books → Open Library
+// Otro EAN → TMDB || búsqueda legacy (Open Library + UPC Item DB)
+// =============================================
+async function identifyByBarcode(barcode, statusId) {
+  const isISBN = barcode.startsWith('978') || barcode.startsWith('979');
+  if (isISBN) {
+    setStatus(statusId, 'loading', 'ISBN detectado — buscando en Google Books...');
+    return await searchGoogleBooks(barcode, true) || await lookupBarcode(barcode);
+  }
+  setStatus(statusId, 'loading', `Código ${barcode} — buscando en bases de datos de medios...`);
+  const [tmdbR, legacyR] = await Promise.allSettled([
+    searchTMDB(barcode),
+    lookupBarcode(barcode)
+  ]);
+  return (tmdbR.status === 'fulfilled' && tmdbR.value?.name && tmdbR.value)
+      || (legacyR.status === 'fulfilled' && legacyR.value?.name && legacyR.value)
+      || null;
+}
+
+// =============================================
+// IDENTIFICACIÓN POR FOTO — Vision OCR → búsqueda por texto
+// Vision se usa SOLO para OCR (TEXT_DETECTION), NO para WEB_DETECTION
+// =============================================
+async function identifyByPhoto(base64, statusId) {
+  setStatus(statusId, 'loading', 'Leyendo texto de la portada con Google Vision OCR...');
+  let ocrText = '';
+  try {
+    ocrText = await ocrWithVision(base64);
+    if (!ocrText?.trim()) {
+      setStatus(statusId, 'error', 'No se encontró texto legible. Prueba con mejor iluminación o usa el código de barras.');
+      document.getElementById('scan-result').style.display = 'block';
+      return;
+    }
+  } catch(e) {
+    const isQuota = /quota|limit|billing/i.test(e.message);
+    setStatus(statusId, 'error', isQuota
+      ? 'Límite de Vision API alcanzado (1.000 imágenes/mes). Usa el código de barras o añade manualmente.'
+      : `Error de Vision API: ${e.message}`);
+    document.getElementById('scan-result').style.display = 'block';
+    return;
+  }
+
+  const { title, allLines } = parseOCRText(ocrText);
+  if (!title) {
+    document.getElementById('r-name').value = '';
+    setStatus(statusId, 'info', 'Texto detectado pero sin título claro. Añade manualmente.');
+    document.getElementById('scan-result').style.display = 'block';
+    return;
+  }
+  setStatus(statusId, 'loading', `Texto: "<b>${esc(title)}</b>" — buscando...`);
+
+  const results = await searchAllAPIs(title, allLines);
+
+  if (!results.length) {
+    document.getElementById('r-name').value = title;
+    setStatus(statusId, 'info', `Sin resultados para "<b>${esc(title)}</b>". Completa el formulario manualmente.`);
+    document.getElementById('scan-result').style.display = 'block';
+    return;
+  }
+  if (results.length === 1) {
+    fillResultForm(results[0]);
+    setStatus(statusId, 'success', `Encontrado: <b>${esc(results[0].name)}</b>`);
+  } else {
+    showSearchResults(results, statusId, title);
+  }
+}
+
+// Google Vision — TEXT_DETECTION únicamente
+async function ocrWithVision(base64) {
   const r = await fetch(
     `https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_API_KEY}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        requests: [{
-          image: { content: base64 },
-          features: [
-            { type: 'WEB_DETECTION', maxResults: 10 },
-            { type: 'LABEL_DETECTION', maxResults: 15 }
-          ]
-        }]
+        requests: [{ image: { content: base64 }, features: [{ type: 'TEXT_DETECTION', maxResults: 1 }] }]
       }),
       signal: AbortSignal.timeout(10000)
     }
@@ -742,199 +893,217 @@ async function callGoogleVision(base64) {
   if (!r.ok) throw new Error(`Vision API ${r.status}: ${r.statusText}`);
   const data = await r.json();
   if (data.responses?.[0]?.error) throw new Error(data.responses[0].error.message);
-  return {
-    webDetection: data.responses?.[0]?.webDetection || {},
-    labels: data.responses?.[0]?.labelAnnotations || []
-  };
+  return data.responses?.[0]?.textAnnotations?.[0]?.description || '';
 }
 
-function parseVisionResult(webDetection, labels) {
-  // Best guess from Google — only if western text
-  const rawGuess = (webDetection.bestGuessLabels?.[0]?.label || '').trim();
-  const bestGuess = isWesternText(rawGuess) ? rawGuess : '';
-
-  // Web entities: filter by score AND western alphabet only
-  const entities = (webDetection.webEntities || [])
-    .filter(e => e.description && (e.score || 0) > 0.35 && isWesternText(e.description))
-    .sort((a, b) => (b.score || 0) - (a.score || 0));
-
-  // All descriptive text for category/platform detection
-  const allText = [
-    bestGuess,
-    ...entities.map(e => e.description || ''),
-    ...labels.map(l => l.description || '')
-  ].join(' ').toLowerCase();
-
-  // Product name: best guess first, fall back to top western entity
-  let name = (bestGuess || entities[0]?.description || '').trim();
-  // Strip trailing platform tokens appended by Google ("...ps4", "...switch", etc.)
-  name = name.replace(/\s+(ps[1-5]|xbox(\s+\w+)?|switch|nintendo\s+\w+|4k\s*uhd?|uhd|blu[\-\s]?ray|dvd|steam|pc)\s*$/i, '').trim();
-  // Title-case each word
-  name = name.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-
-  const category = guessCategory(name, allText);
-  const platform = detectPlatformFromText(allText);
-  const publisher = detectPublisherFromEntities(entities, name);
-  const yearMatch = entities.map(e => e.description || '').join(' ').match(/\b(19[5-9]\d|20[0-3]\d)\b/);
-
-  // Cover image from Vision's web image matches
-  const cover = extractCoverFromVision(webDetection);
-
-  return {
-    name,
-    category,
-    platform,
-    publisher,
-    year: yearMatch?.[0] || '',
-    genre: '',
-    desc: '',
-    barcode: '',
-    cover,
-    confidence: (entities[0]?.score || 0) > 0.7 ? 'high' : (entities[0]?.score || 0) > 0.45 ? 'medium' : 'low'
-  };
+function parseOCRText(rawText) {
+  const lines = rawText.split('\n')
+    .map(l => l.trim())
+    .filter(l => l.length >= 2 && l.length <= 80)
+    .filter(l => !/^\d[\d\s\-]{4,}$/.test(l))
+    .filter(l => !/^(isbn|ean|©|copyright|www\.|http|pegi|ages?\s*\d|\d+\+)/i.test(l))
+    .filter(l => isWesternText(l));
+  const topLines = lines.slice(0, Math.max(2, Math.ceil(lines.length * 0.4)));
+  const title = (topLines.sort((a, b) => b.length - a.length)[0] || lines[0] || '').trim();
+  return { title, allLines: lines };
 }
 
 function isWesternText(str) {
   if (!str || str.length < 2) return true;
-  // Count Latin/Western Unicode characters (Basic Latin, Latin Extended, diacritics, digits, common punctuation)
-  const western = (str.match(/[ -ɏḀ-ỿ0-9\s\-:'"!?.,()&]/g) || []).length;
-  return (western / str.length) > 0.55;
+  const western = (str.match(/[ -ɏḀ-ỿ0-9\s]/g) || []).length;
+  return (western / str.length) > 0.6;
 }
 
-function extractCoverFromVision(webDetection) {
-  // Prefer exact image matches found on the web (same cover art)
-  const sources = [
-    ...(webDetection.fullMatchingImages || []),
-    ...(webDetection.partialMatchingImages || []),
-    ...(webDetection.visuallySimilarImages || [])
-  ];
-  for (const img of sources) {
-    const url = img.url || '';
-    // Skip Google's encrypted thumbnail cache (low quality, CDN-unstable)
-    if (url && !url.includes('encrypted-tbn') && !url.includes('gstatic.com/images')) {
-      return url;
-    }
-  }
-  return '';
+// =============================================
+// APIs DE BÚSQUEDA
+// =============================================
+
+async function searchAllAPIs(title, allLines = []) {
+  const [booksR, tmdbR, anilistR] = await Promise.allSettled([
+    searchGoogleBooks(title),
+    searchTMDB(title),
+    searchAniList(title),
+  ]);
+  const results = [];
+  [booksR, tmdbR, anilistR].forEach(r => {
+    if (r.status === 'fulfilled' && r.value?.name) results.push(r.value);
+  });
+  return results.slice(0, 5);
 }
 
-function detectPlatformFromText(t) {
-  if (/playstation\s*5|ps\s*5\b/i.test(t)) return 'PlayStation 5';
-  if (/playstation\s*4|ps\s*4\b/i.test(t)) return 'PlayStation 4';
-  if (/playstation\s*3|ps\s*3\b/i.test(t)) return 'PlayStation 3';
-  if (/xbox\s*series\s*x/i.test(t)) return 'Xbox Series X';
-  if (/xbox\s*one/i.test(t)) return 'Xbox One';
-  if (/nintendo\s*switch|\bswitch\b/i.test(t)) return 'Nintendo Switch';
-  if (/4k\s*uhd|uhd\s*blu|4k\s*blu/i.test(t)) return '4K Blu-ray';
-  if (/blu[\-\s]?ray/i.test(t)) return 'Blu-ray';
-  if (/\bdvd\b/i.test(t)) return 'DVD';
-  if (/\bsteam\b|\bpc\s*game\b/i.test(t)) return 'PC';
-  if (/3ds|nintendo\s*3ds/i.test(t)) return 'Nintendo 3DS';
-  return '';
-}
-
-function detectPublisherFromEntities(entities, name) {
-  const known = ['Sony','Microsoft','Nintendo','Activision','Electronic Arts','EA','Ubisoft',
-    'Bethesda','Rockstar','2K Games','Square Enix','Bandai Namco','Capcom','Konami','SEGA',
-    'Naughty Dog','FromSoftware','CD Projekt','Warner Bros','Disney','Marvel','Netflix','HBO',
-    'Universal','Paramount','Sony Pictures','Focus Entertainment','Devolver Digital',
-    'Annapurna','THQ Nordic','Deep Silver','Penguin','HarperCollins','Random House',
-    'Simon & Schuster','Hachette','Macmillan','Planeta','Norma Editorial'];
-  const n1 = (name.split(' ')[0] || '').toLowerCase();
-  for (const e of entities) {
-    const d = e.description || '';
-    if (d.toLowerCase().includes(n1) || n1.includes(d.toLowerCase())) continue; // skip if it's part of the product name
-    if (known.some(p => d.toLowerCase().includes(p.toLowerCase()))) return d;
-  }
-  return '';
-}
-
-async function enrichByTitle(name, category) {
-  if (category === 'book' || category === 'comic') {
-    try {
-      const r = await fetch(
-        `https://openlibrary.org/search.json?title=${encodeURIComponent(name)}&limit=1`,
-        { signal: AbortSignal.timeout(5000) }
-      );
-      const d = await r.json();
-      const doc = d.docs?.[0];
-      if (doc && doc.title) {
-        return {
-          name: doc.title,
-          year: doc.first_publish_year?.toString() || '',
-          publisher: doc.publisher?.[0] || '',
-          genre: doc.subject_facet?.slice(0, 3).join(', ') || '',
-          cover: doc.cover_i ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg` : '',
-          confidence: 'high'
-        };
-      }
-    } catch(e) {}
-  }
-  return null;
-}
-
-async function analyzeImage(base64, statusId) {
-  setStatus(statusId, 'loading', 'Decodificando código de barras...');
-  let result = null, barcode = null;
-
-  // Step 1: ZXing barcode decode + database lookup (fast)
+// Google Books — libros, cómics, manga. Sin key. CORS OK.
+async function searchGoogleBooks(query, isISBN = false) {
   try {
-    barcode = await decodeBarcodeFromImage(base64);
-    if (barcode) {
-      setStatus(statusId, 'loading', `Código <b>${barcode}</b> — buscando en bases de datos...`);
-      result = await lookupBarcode(barcode);
-    }
-  } catch(e) {}
-
-  // Step 2: Google Vision WEB_DETECTION (Google Lens) if no result yet
-  if (!result?.name) {
-    setStatus(statusId, 'loading', `${barcode ? 'Código ' + barcode + ' no encontrado — ' : ''}Reconociendo portada con Google Lens...`);
-    try {
-      const { webDetection, labels } = await callGoogleVision(base64);
-      const visionResult = parseVisionResult(webDetection, labels);
-
-      if (visionResult.name) {
-        if (barcode) visionResult.barcode = barcode;
-        // Enrich books/comics with Open Library
-        const enriched = await enrichByTitle(visionResult.name, visionResult.category);
-        result = enriched ? { ...visionResult, ...enriched, barcode: visionResult.barcode || '' } : visionResult;
-      }
-    } catch(e) {
-      console.warn('[Collectr] Google Vision error:', e.message);
-      if (barcode) {
-        result = { name: '', barcode, category: 'other', confidence: 'low' };
-      } else {
-        setStatus(statusId, 'error', 'No se pudo reconocer la imagen. Añade el ítem manualmente.');
-        console.warn('[Vision]', e.message);
-        document.getElementById('scan-result').style.display = 'block';
-        return;
-      }
-    }
-  }
-
-  // Show result
-  if (result?.name || barcode) {
-    if (barcode && !result.barcode) result.barcode = barcode;
-    fillResultForm(result);
-    setStatus(statusId, 'success',
-      result.name
-        ? `Identificado: <b>${esc(result.name)}</b> · Confianza: ${result.confidence || 'alta'}`
-        : `Código: ${barcode} — completa los datos manualmente`
+    const q = isISBN ? `isbn:${query}` : `intitle:${encodeURIComponent(query)}`;
+    const r = await fetch(
+      `https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=3`,
+      { signal: AbortSignal.timeout(7000) }
     );
-  } else {
-    setStatus(statusId, 'info', 'No se encontró resultado. Completa el formulario manualmente.');
-    document.getElementById('scan-result').style.display = 'block';
-  }
+    if (!r.ok) return null;
+    const d = await r.json();
+    const vol = d.items?.[0]?.volumeInfo;
+    if (!vol?.title) return null;
+    const cats = (vol.categories || []).join(' ').toLowerCase();
+    let category = 'book';
+    if (/manga/i.test(cats) || /manga/i.test(vol.title)) category = 'manga';
+    else if (/comic|graphic.novel/i.test(cats)) category = 'comic';
+    return {
+      name: vol.title,
+      category,
+      year: vol.publishedDate?.slice(0, 4) || '',
+      publisher: (vol.authors || []).join(', ') || vol.publisher || '',
+      platform: '',
+      genre: (vol.categories || []).slice(0, 2).join(', '),
+      desc: vol.description ? vol.description.replace(/<[^>]+>/g, '').slice(0, 280) : '',
+      cover: vol.imageLinks?.extraLarge || vol.imageLinks?.large || vol.imageLinks?.thumbnail || '',
+      barcode: isISBN ? query : '',
+      confidence: isISBN ? 'high' : 'medium',
+      source: 'google-books'
+    };
+  } catch(e) { return null; }
 }
+
+// TMDB — películas y series. Necesita TMDB key en api-config.js. CORS OK.
+async function searchTMDB(query) {
+  const key = window.API_CONFIG?.tmdb;
+  if (!key) return null;
+  try {
+    const r = await fetch(
+      `https://api.themoviedb.org/3/search/multi?query=${encodeURIComponent(query)}&api_key=${key}&language=es-ES`,
+      { signal: AbortSignal.timeout(7000) }
+    );
+    if (!r.ok) return null;
+    const d = await r.json();
+    const item = d.results?.find(x => ['movie','tv'].includes(x.media_type));
+    if (!item) return null;
+    return {
+      name: item.title || item.name || '',
+      category: 'movie',
+      year: (item.release_date || item.first_air_date || '').slice(0, 4),
+      publisher: '',
+      platform: '',
+      genre: '',
+      desc: (item.overview || '').slice(0, 280),
+      cover: item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : '',
+      barcode: '',
+      confidence: 'high',
+      source: 'tmdb'
+    };
+  } catch(e) { return null; }
+}
+
+// AniList — manga y anime. Sin key. CORS OK.
+async function searchAniList(query) {
+  try {
+    const r = await fetch('https://graphql.anilist.co', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({
+        query: `query ($s: String) {
+          Media(search: $s, type: MANGA, sort: POPULARITY_DESC) {
+            title { romaji english }
+            coverImage { large }
+            genres
+            description(asHtml: false)
+            startDate { year }
+            staff(perPage: 1) { nodes { name { full } } }
+          }
+        }`,
+        variables: { s: query }
+      }),
+      signal: AbortSignal.timeout(7000)
+    });
+    if (!r.ok) return null;
+    const d = await r.json();
+    if (d.errors || !d.data?.Media) return null;
+    const m = d.data.Media;
+    return {
+      name: m.title?.english || m.title?.romaji || '',
+      category: 'manga',
+      year: m.startDate?.year?.toString() || '',
+      publisher: m.staff?.nodes?.[0]?.name?.full || '',
+      platform: '',
+      genre: (m.genres || []).slice(0, 3).join(', '),
+      desc: (m.description || '').replace(/<[^>]+>/g, '').slice(0, 280),
+      cover: m.coverImage?.large || '',
+      barcode: '',
+      confidence: 'medium',
+      source: 'anilist'
+    };
+  } catch(e) { return null; }
+}
+
+// =============================================
+// LISTA DE RESULTADOS MÚLTIPLES — usuario confirma
+// =============================================
+function showSearchResults(results, statusId, searchTitle) {
+  window._searchResults = results;
+  const slot = document.getElementById('search-results-slot');
+  if (!slot) return;
+  const sourceNames = { 'google-books': 'Google Books', tmdb: 'TMDB', anilist: 'AniList' };
+  slot.innerHTML = `<div class="search-results">
+    <div class="search-results-header">
+      <i class="ti ti-list-search"></i>
+      Varios resultados para "<b>${esc(searchTitle)}</b>" — ¿cuál es el correcto?
+    </div>
+    ${results.map((r, i) => {
+      const ci = CAT_INFO[r.category] || CAT_INFO.other;
+      return `<div class="search-result-item" onclick="selectSearchResult(${i})">
+        ${r.cover
+          ? `<img src="${esc(r.cover)}" class="result-thumb" alt="" onerror="this.style.display='none'">`
+          : `<div class="result-thumb-empty">${ci.emoji}</div>`}
+        <div class="result-info">
+          <div class="result-name">${esc(r.name)}</div>
+          <div class="result-meta">${[ci.label, r.year, r.publisher].filter(Boolean).join(' · ')}</div>
+          ${r.source ? `<div class="result-source">${sourceNames[r.source] || r.source}</div>` : ''}
+        </div>
+        <i class="ti ti-chevron-right" style="color:var(--text3);flex-shrink:0"></i>
+      </div>`;
+    }).join('')}
+    <div class="search-result-item" onclick="selectManualEntry()">
+      <div class="result-thumb-empty" style="font-size:0.85rem">✏️</div>
+      <div class="result-info">
+        <div class="result-name" style="color:var(--accent3)">Ninguno — añadir manualmente</div>
+        <div class="result-meta">Rellena los datos tú mismo</div>
+      </div>
+    </div>
+  </div>`;
+  document.getElementById('scan-result').style.display = 'none';
+  setStatus(statusId, 'info', `${results.length} resultados — elige el correcto en la lista.`);
+}
+
+window.selectSearchResult = (i) => {
+  const result = window._searchResults?.[i];
+  if (!result) return;
+  document.getElementById('search-results-slot').innerHTML = '';
+  fillResultForm(result);
+  const activeStatus = document.getElementById('camera-status')?.innerHTML
+    ? 'camera-status' : 'image-status';
+  setStatus(activeStatus, 'success', `Seleccionado: <b>${esc(result.name)}</b>`);
+};
+
+window.selectManualEntry = () => {
+  document.getElementById('search-results-slot').innerHTML = '';
+  document.getElementById('scan-result').style.display = 'block';
+};
+
+
+
 
 function fillResultForm(data) {
   const fields = {
     'r-name': data.name, 'r-year': data.year, 'r-platform': data.platform,
     'r-publisher': data.publisher, 'r-genre': data.genre,
     'r-desc': data.desc || data.notes, 'r-barcode': data.barcode,
-    'r-cover': data.cover
+    'r-cover': data.cover, 'r-notas': data.notas || ''
   };
   Object.entries(fields).forEach(([id, val]) => { const el = document.getElementById(id); if(el) el.value = val || ''; });
+
+  // Estado (tengo/quiero/progreso) — derive from data.estado or legacy data.wishlist
+  const estadoSel = document.getElementById('r-estado');
+  if (estadoSel) {
+    estadoSel.value = data.estado || (data.wishlist ? 'quiero' : 'tengo');
+  }
 
   // Auto-show cover preview when Vision returns a URL
   const rcp = document.getElementById('r-cover-preview');
@@ -1002,7 +1171,8 @@ window.addItemFromModal = () => {
       desc: document.getElementById('m-notes').value,
       cover: document.getElementById('m-cover').value,
       barcode: document.getElementById('m-barcode').value,
-      wishlist: document.getElementById('m-wishlist').value === 'yes'
+      estado: document.getElementById('m-estado').value,
+      notas: document.getElementById('m-notas')?.value || ''
     });
   } else if (isResult) {
     const name = document.getElementById('r-name').value.trim();
@@ -1016,7 +1186,8 @@ window.addItemFromModal = () => {
       desc: document.getElementById('r-desc').value,
       cover: document.getElementById('r-cover').value,
       barcode: document.getElementById('r-barcode').value,
-      wishlist: document.getElementById('r-wishlist').value === 'yes'
+      estado: document.getElementById('r-estado').value,
+      notas: document.getElementById('r-notas')?.value || ''
     });
   } else {
     toast('Captura o sube una imagen, o usa la pestaña Manual', 'info');
@@ -1037,6 +1208,7 @@ window.addItemFromModal = () => {
 };
 
 function buildItem(data) {
+  const estado = data.estado || (data.wishlist ? 'quiero' : 'tengo');
   return {
     id: editingId || gid(),
     name: data.name || '',
@@ -1046,10 +1218,12 @@ function buildItem(data) {
     publisher: data.publisher || '',
     genre: data.genre || '',
     desc: data.desc || '',
+    notas: data.notas || '',
     cover: data.cover || '',
     barcode: data.barcode || '',
     rating: 0,
-    wishlist: data.wishlist || false,
+    estado,
+    wishlist: estado === 'quiero',  // backward compat
     added: new Date().toISOString()
   };
 }
@@ -1075,11 +1249,12 @@ window.openDetail = (id) => {
           <div class="detail-title">${esc(item.name)}</div>
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:0.5rem">
             <span class="item-badge ${ci.badgeClass}" style="position:static;display:inline-block">${ci.label}</span>
-            ${item.wishlist ? '<span style="font-size:0.75rem;color:var(--warn)"><i class="ti ti-heart" aria-hidden="true"></i> Wishlist</span>' : ''}
+            ${(item.estado === 'quiero' || item.wishlist) ? '<span style="font-size:0.75rem;color:var(--warn)"><i class="ti ti-heart" aria-hidden="true"></i> Wishlist</span>' : ''}
+            ${item.estado === 'progreso' ? '<span style="font-size:0.75rem;color:var(--accent2)"><i class="ti ti-clock" aria-hidden="true"></i> En progreso</span>' : ''}
           </div>
           <div class="detail-actions" style="margin-top:0;margin-bottom:0.75rem">
             <button class="btn btn-ghost btn-sm" onclick="openEditForItem('${id}');closeDetailModal()"><i class="ti ti-edit"></i> Editar</button>
-            ${item.wishlist ? `<button class="btn btn-success btn-sm" onclick="markOwned('${id}');closeDetailModal()"><i class="ti ti-check"></i> ¡Ya lo tengo!</button>` : ''}
+            ${(item.estado === 'quiero' || item.wishlist) ? `<button class="btn btn-success btn-sm" onclick="markOwned('${id}');closeDetailModal()"><i class="ti ti-check"></i> ¡Ya lo tengo!</button>` : ''}
             <button class="btn btn-danger btn-sm" onclick="deleteItem('${id}');closeDetailModal()"><i class="ti ti-trash"></i> Eliminar</button>
           </div>
           <div class="rating-stars" aria-label="Valoración">${stars}</div>
@@ -1131,9 +1306,11 @@ window.openEditForItem = (id) => {
     document.getElementById('m-notes').value = item.desc || '';
     document.getElementById('m-cover').value = item.cover || '';
     document.getElementById('m-barcode').value = item.barcode || '';
-    document.getElementById('m-wishlist').value = item.wishlist ? 'yes' : 'no';
+    document.getElementById('m-estado').value = item.estado || (item.wishlist ? 'quiero' : 'tengo');
+    const mNotas = document.getElementById('m-notas');
+    if (mNotas) mNotas.value = item.notas || '';
     if (item.cover) { const img = document.getElementById('m-cover-preview'); img.src = item.cover; img.style.display = 'block'; }
-    const hasExtra = item.year || item.platform || item.publisher || item.genre || item.desc || item.cover || item.barcode;
+    const hasExtra = item.year || item.platform || item.publisher || item.genre || item.desc || item.cover || item.barcode || item.notas;
     if (hasExtra) {
       const panel = document.getElementById('extra-fields-panel');
       const icon = document.getElementById('extra-toggle-icon');
@@ -1156,6 +1333,7 @@ window.deleteItem = (id) => {
 window.markOwned = (id) => {
   const item = DB.find(x => x.id === id);
   if (!item) return;
+  item.estado = 'tengo';
   item.wishlist = false;
   scheduleSave(); renderAll();
   toast(`"${item.name}" añadido a tu colección`, 'success');
@@ -1240,7 +1418,8 @@ function processImportFile(file) {
         if (!item.name) { skipped++; return; }
         const exists = DB.some(x => x.id === item.id || (x.name === item.name && x.category === item.category));
         if (exists) { skipped++; return; }
-        DB.unshift({ id: item.id || gid(), name: item.name, category: item.category || 'other', year: item.year||'', platform: item.platform||'', publisher: item.publisher||'', genre: item.genre||'', desc: item.desc||'', cover: item.cover||'', barcode: item.barcode||'', rating: item.rating||0, wishlist: item.wishlist||false, added: item.added || new Date().toISOString() });
+        const estado = item.estado || (item.wishlist ? 'quiero' : 'tengo');
+        DB.unshift({ id: item.id || gid(), name: item.name, category: item.category || 'other', year: item.year||'', platform: item.platform||'', publisher: item.publisher||'', genre: item.genre||'', desc: item.desc||'', notas: item.notas||'', cover: item.cover||'', barcode: item.barcode||'', rating: item.rating||0, estado, wishlist: estado === 'quiero', added: item.added || new Date().toISOString() });
         added++;
       });
       scheduleSave(); renderAll();
@@ -1267,7 +1446,6 @@ function parseCSV(text) {
 
 // ===== MODAL HELPERS =====
 window.closeModalOnOverlay = (e, id) => { if(e.target.id === id) document.getElementById(id).style.display = 'none'; };
-window.closeImportModal = () => { document.getElementById('import-modal').style.display = 'none'; };
 
 // ===== STATUS =====
 function setStatus(containerId, type, msg) {

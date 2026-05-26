@@ -9,6 +9,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Collectr">
   <meta name="referrer" content="unsafe-url">
+  <script src="api-config.js" onerror="window.API_CONFIG=window.API_CONFIG||{}"></script>
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="icon" type="image/png" href="icons/icon-192.png">
@@ -142,7 +143,10 @@
           <option value="bluray">Blu-ray</option>
           <option value="book">Libros</option>
           <option value="comic">Cómics</option>
+          <option value="manga">Manga</option>
           <option value="music">Música</option>
+          <option value="boardgame">Juegos de mesa</option>
+          <option value="figure">Figuritas</option>
           <option value="other">Otros</option>
         </select>
         <select class="filter-select" id="sort-select" onchange="filterItems()">
@@ -180,7 +184,7 @@
     <div class="modal-header">
       <div>
         <div class="modal-title">Añadir a la colección</div>
-        <div class="modal-sub">Fotografía la portada, código de barras o añade manualmente</div>
+        <div class="modal-sub">Elige modo de escaneo, sube una imagen o añade manualmente</div>
       </div>
       <button class="btn-icon" onclick="closeScannerModal()" aria-label="Cerrar"><i class="ti ti-x"></i></button>
     </div>
@@ -193,11 +197,28 @@
 
     <!-- CAMERA -->
     <div id="scan-panel-camera">
-      <div class="camera-box" id="camera-box" onclick="startCamera()">
+      <!-- SELECCIÓN DE MODO — el usuario elige explícitamente -->
+      <div class="scan-mode-selector">
+        <button class="scan-mode-btn" id="scan-mode-barcode" onclick="setScanMode('barcode')">
+          <i class="ti ti-barcode" style="font-size:1.4rem;flex-shrink:0"></i>
+          <div class="scan-mode-info">
+            <strong>Código de barras</strong>
+            <small>Rápido y preciso. Apunta al código EAN / ISBN.</small>
+          </div>
+        </button>
+        <button class="scan-mode-btn" id="scan-mode-photo" onclick="setScanMode('photo')">
+          <i class="ti ti-photo-scan" style="font-size:1.4rem;flex-shrink:0"></i>
+          <div class="scan-mode-info">
+            <strong>Foto de portada</strong>
+            <small>Lee el texto visible. Usa créditos Vision API (1.000/mes).</small>
+          </div>
+        </button>
+      </div>
+      <div class="camera-box" id="camera-box">
         <div class="camera-placeholder" id="cam-placeholder">
           <i class="ti ti-camera" style="font-size:2.5rem" aria-hidden="true"></i>
-          <span>Toca para activar la cámara</span>
-          <small>Apunta a la portada del producto o código de barras</small>
+          <span>Elige un modo arriba para activar la cámara</span>
+          <small>Código de barras es más fiable cuando esté disponible</small>
         </div>
         <video id="camera-video" autoplay playsinline muted style="display:none"></video>
         <canvas id="camera-canvas" style="display:none"></canvas>
@@ -238,20 +259,24 @@
           <label class="form-label">Categoría <span style="color:var(--danger)">*</span></label>
           <select class="form-select" id="m-cat">
             <option value="game">Videojuego</option>
-            <option value="movie">Película</option>
+            <option value="movie">Película / Serie</option>
             <option value="dvd">DVD</option>
             <option value="bluray">Blu-ray</option>
             <option value="book">Libro</option>
             <option value="comic">Cómic</option>
+            <option value="manga">Manga</option>
             <option value="music">Música</option>
+            <option value="boardgame">Juego de mesa</option>
+            <option value="figure">Figurita</option>
             <option value="other">Otro</option>
           </select>
         </div>
         <div class="form-group">
           <label class="form-label">Estado</label>
-          <select class="form-select" id="m-wishlist">
-            <option value="no">Lo tengo</option>
-            <option value="yes">Lo quiero (wishlist)</option>
+          <select class="form-select" id="m-estado">
+            <option value="tengo">Lo tengo</option>
+            <option value="quiero">Lo quiero (wishlist)</option>
+            <option value="progreso">En progreso</option>
           </select>
         </div>
       </div>
@@ -292,6 +317,9 @@
       </div>
     </div>
 
+    <!-- SEARCH RESULTS (candidatos múltiples de la búsqueda por OCR) -->
+    <div id="search-results-slot"></div>
+
     <!-- RESULT PREVIEW -->
     <div id="scan-result" style="display:none">
       <div id="detection-banner-slot"></div>
@@ -307,10 +335,17 @@
         <div class="form-group">
           <label class="form-label">Categoría</label>
           <select class="form-select" id="r-cat">
-            <option value="game">Videojuego</option><option value="movie">Película</option>
-            <option value="dvd">DVD</option><option value="bluray">Blu-ray</option>
-            <option value="book">Libro</option><option value="comic">Cómic</option>
-            <option value="music">Música</option><option value="other">Otro</option>
+            <option value="game">Videojuego</option>
+            <option value="movie">Película / Serie</option>
+            <option value="dvd">DVD</option>
+            <option value="bluray">Blu-ray</option>
+            <option value="book">Libro</option>
+            <option value="comic">Cómic</option>
+            <option value="manga">Manga</option>
+            <option value="music">Música</option>
+            <option value="boardgame">Juego de mesa</option>
+            <option value="figure">Figurita</option>
+            <option value="other">Otro</option>
           </select>
         </div>
         <div class="form-group">
@@ -331,7 +366,11 @@
         </div>
         <div class="form-group full">
           <label class="form-label">Descripción</label>
-          <textarea class="form-textarea" id="r-desc"></textarea>
+          <textarea class="form-textarea" id="r-desc" style="min-height:60px"></textarea>
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Notas personales</label>
+          <textarea class="form-textarea" id="r-notas" placeholder="Edición especial, estado del producto, tus impresiones..." style="min-height:50px"></textarea>
         </div>
         <div class="form-group full">
           <label class="form-label">URL portada</label>
@@ -344,9 +383,10 @@
         </div>
         <div class="form-group">
           <label class="form-label">Estado</label>
-          <select class="form-select" id="r-wishlist">
-            <option value="no">Lo tengo</option>
-            <option value="yes">Lo quiero (wishlist)</option>
+          <select class="form-select" id="r-estado">
+            <option value="tengo">Lo tengo</option>
+            <option value="quiero">Lo quiero (wishlist)</option>
+            <option value="progreso">En progreso (leyendo / viendo / jugando)</option>
           </select>
         </div>
       </div>

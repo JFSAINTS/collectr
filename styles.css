@@ -340,6 +340,56 @@ body {
 .item-row-meta { font-size: 0.73rem; color: var(--text3); margin-top: 2px; }
 .item-row-actions { display: flex; gap: 5px; flex-shrink: 0; }
 
+/* SCAN MODE SELECTOR */
+.scan-mode-selector {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem; margin-bottom: 1rem;
+}
+.scan-mode-btn {
+  display: flex; align-items: center; gap: 0.7rem;
+  padding: 0.8rem 0.9rem;
+  background: var(--bg3); border: 1.5px solid var(--border);
+  border-radius: var(--radius); cursor: pointer; text-align: left;
+  font-family: inherit; color: var(--text2); transition: all 0.2s;
+}
+.scan-mode-btn:hover { border-color: var(--border2); color: var(--text); }
+.scan-mode-btn.active {
+  border-color: var(--accent2); background: rgba(124,106,247,0.1); color: var(--text);
+}
+.scan-mode-btn .ti { color: var(--accent2); }
+.scan-mode-info strong { display: block; font-size: 0.78rem; font-weight: 600; }
+.scan-mode-info small { display: block; font-size: 0.67rem; color: var(--text3); margin-top: 2px; line-height: 1.35; }
+
+/* SEARCH RESULTS LIST */
+.search-results {
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: var(--radius); margin: 0.75rem 0; overflow: hidden;
+  animation: bannerIn 0.25s ease;
+}
+.search-results-header {
+  padding: 0.65rem 1rem; font-size: 0.78rem; font-weight: 600; color: var(--text2);
+  background: var(--bg3); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 7px;
+}
+.search-result-item {
+  display: flex; align-items: center; gap: 0.8rem; padding: 0.65rem 1rem;
+  cursor: pointer; transition: background 0.15s; border-bottom: 1px solid var(--border);
+}
+.search-result-item:last-child { border-bottom: none; }
+.search-result-item:hover { background: var(--bg3); }
+.result-thumb {
+  width: 34px; height: 48px; border-radius: 4px; object-fit: cover;
+  background: var(--bg4); flex-shrink: 0;
+}
+.result-thumb-empty {
+  width: 34px; height: 48px; border-radius: 4px; background: var(--bg4);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem; flex-shrink: 0;
+}
+.result-info { flex: 1; min-width: 0; }
+.result-name { font-size: 0.85rem; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.result-meta { font-size: 0.71rem; color: var(--text3); margin-top: 1px; }
+.result-source { font-size: 0.63rem; color: var(--accent3); margin-top: 1px; }
+
 /* BADGE COLORS */
 .badge-game { background: rgba(124,106,247,0.9); color: white; }
 .badge-movie { background: rgba(245,200,66,0.9); color: #1a1500; }
@@ -348,7 +398,10 @@ body {
 .badge-book { background: rgba(34,197,94,0.9); color: #001a08; }
 .badge-comic { background: rgba(239,68,68,0.9); color: white; }
 .badge-music { background: rgba(236,72,153,0.9); color: white; }
-.badge-other { background: rgba(148,163,184,0.9); color: white; }
+.badge-other     { background: rgba(148,163,184,0.9); color: white; }
+.badge-manga     { background: rgba(251,146,60,0.9);  color: white; }
+.badge-boardgame { background: rgba(16,185,129,0.9);  color: white; }
+.badge-figure    { background: rgba(217,119,6,0.9);   color: white; }
 
 /* CATEGORIES */
 .cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px,1fr)); gap: 1rem; }
