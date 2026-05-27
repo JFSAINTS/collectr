@@ -12,7 +12,8 @@
   <script src="api-config.js" onerror="window.API_CONFIG=window.API_CONFIG||{}"></script>
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="icons/icon-16.png">
   <title>Collectr</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -72,6 +73,16 @@
     </div>
     <div class="nav-item" onclick="openExportModal()">
       <i class="ti ti-download"></i> Exportar
+    </div>
+    <div class="nav-item" onclick="downloadBackupNow()">
+      <i class="ti ti-device-floppy"></i> Backup manual
+    </div>
+    <div class="backup-status-bar">
+      <i class="ti ti-shield-check"></i>
+      <span id="backup-status">Sin backup</span>
+      <button class="btn-icon btn-xs" onclick="restoreAutoBackup()" title="Restaurar último backup">
+        <i class="ti ti-history"></i>
+      </button>
     </div>
 
     <div class="sidebar-bottom">
@@ -458,6 +469,6 @@
   <button class="btn-icon" onclick="dismissInstall()" aria-label="Cerrar"><i class="ti ti-x"></i></button>
 </div>
 
-<script type="module" src="app.js?v=5"></script>
+<script type="module" src="app.js?v=6"></script>
 </body>
 </html>

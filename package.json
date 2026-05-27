@@ -1,6 +1,6 @@
 {
   "name": "collectr",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Cataloga tu colección de videojuegos, películas, libros y más",
   "main": "electron-main.js",
   "homepage": "https://jfsaints.github.io/collectr/",
@@ -44,7 +44,7 @@
           ]
         }
       ],
-      "icon": "icons/icon-512.png"
+      "icon": "icons/icon.ico"
     },
     "nsis": {
       "oneClick": true,

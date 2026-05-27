@@ -245,10 +245,19 @@ git -C D:\CATALOGA push origin main
 - [ ] **Habilitar Google Auth** en Firebase Console → Authentication → Sign-in methods.
 - [ ] **Habilitar Facebook Auth** → requiere app en Meta Developers + configurar OAuth.
 - [ ] **Firestore Security Rules** — revisar `firestore.rules` antes de ir a producción.
-- [x] **Iconos PWA** — creados `icons/icon-192.png` e `icons/icon-512.png` (círculo púrpura generado con Python).
+- [x] **Iconos PWA** — creados `icons/icon-16/32/48/128/192/256/512.png` + `icons/icon.ico` (multi-size para Electron) con diseño de estantería de libros sobre fondo gris redondeado (imagen proporcionada por el usuario).
+- [x] **Auto-backup** — backup automático al cerrar/minimizar ventana, `beforeunload`, `visibilitychange`, + cada 5 min. Restauración automática al arrancar si la colección está vacía. Botón "Backup manual" en sidebar.
 - [ ] **CORS en Claude API** — las llamadas directas desde el browser fallarán en producción sin un proxy backend.
 
 ---
+
+## Cambios sesión 2026-05-27
+
+- **Nuevo icono**: diseño de estantería de libros generado con Pillow desde imagen de referencia del usuario. 7 tamaños PNG + ICO multi-size. `package.json` usa `icons/icon.ico` para Electron.
+- **Auto-backup**: `AUTO_BACKUP_KEY = 'collectr_auto_bk'`, `BACKUP_META_KEY = 'collectr_auto_bk_meta'`. Triggers: `beforeunload`, `visibilitychange:hidden`, `setInterval(5min)`. `loadLocalDB()` restaura desde backup si la colección está vacía. `window.downloadBackupNow()` descarga JSON manual. `window.restoreAutoBackup()` restaura con confirm. Sidebar muestra fecha/hora y cantidad del último backup. CSS: `.backup-status-bar`.
+- **index.html**: favicons actualizados (icon-32.png, icon-16.png), backup UI en sidebar, versión `?v=6`.
+- **package.json**: versión `1.0.1`, icono Windows `icons/icon.ico`.
+- **Release v1.0.1**: Windows x64 (portable + NSIS) + Android APK publicados en GitHub.
 
 ## Bugs corregidos (sesión 2026-05-26)
 

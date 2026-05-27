@@ -12,9 +12,9 @@ Demo en vivo: **https://jfsaints.github.io/collectr/**
 
 | Plataforma | Archivo | Descripcion |
 |------------|---------|-------------|
-| Windows x64 | [Collectr-1.0.0-setup.exe](https://github.com/JFSAINTS/collectr/releases/download/v1.0.0/Collectr-1.0.0-setup.exe) | Instalador (acceso directo automatico) |
-| Windows x64 | [Collectr-1.0.0-portable.exe](https://github.com/JFSAINTS/collectr/releases/download/v1.0.0/Collectr-1.0.0-portable.exe) | Portable, sin instalacion |
-| Android | [Collectr-android.apk](https://github.com/JFSAINTS/collectr/releases/download/v1.0.0/Collectr-android.apk) | APK directo (activa "fuentes desconocidas") |
+| Windows x64 | [Collectr-1.0.1-setup.exe](https://github.com/JFSAINTS/collectr/releases/download/v1.0.1/Collectr-1.0.1-setup.exe) | Instalador (acceso directo automatico) |
+| Windows x64 | [Collectr-1.0.1-portable.exe](https://github.com/JFSAINTS/collectr/releases/download/v1.0.1/Collectr-1.0.1-portable.exe) | Portable, sin instalacion |
+| Android | [Collectr-android.apk](https://github.com/JFSAINTS/collectr/releases/download/v1.0.1/Collectr-android.apk) | APK directo (activa "fuentes desconocidas") |
 | Navegador / PWA | [jfsaints.github.io/collectr](https://jfsaints.github.io/collectr/) | Instala desde el navegador |
 
 ---
@@ -33,6 +33,7 @@ Demo en vivo: **https://jfsaints.github.io/collectr/**
 - **Exportacion** — descarga en JSON, CSV o HTML visual con portadas
 - **Importacion** — importa colecciones desde JSON o CSV
 - **Valoraciones** — puntua tus items del 1 al 5
+- **Backup automatico** — copia de seguridad automatica al cerrar la app o el navegador, con restauracion al arrancar si se detecta coleccion vacia
 
 ---
 

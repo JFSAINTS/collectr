@@ -141,6 +141,8 @@ window.toggleExtraFields = () => {
 
 // ===== LOCAL STORAGE =====
 const LS_KEY = 'collectr_db_v2';
+const AUTO_BACKUP_KEY  = 'collectr_auto_bk';
+const BACKUP_META_KEY  = 'collectr_auto_bk_meta';
 
 function loadLocalRaw() {
   try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]'); } catch(e) { return []; }
@@ -148,13 +150,83 @@ function loadLocalRaw() {
 
 function loadLocalDB() {
   DB = loadLocalRaw();
-  if (!DB.length) seedDemo();
+  if (!DB.length) {
+    const bk = getAutoBackup();
+    if (bk && bk.length) {
+      DB = bk;
+      saveLocalDB();
+      // Notifica después de que la UI sea visible
+      setTimeout(() => toast(`Colección restaurada desde backup: ${DB.length} ítems`, 'success'), 900);
+    } else {
+      seedDemo();
+    }
+  }
   renderAll();
+  updateBackupStatus();
 }
 
 function saveLocalDB() {
   try { localStorage.setItem(LS_KEY, JSON.stringify(DB)); } catch(e) {}
 }
+
+// ===== AUTO-BACKUP =====
+function getAutoBackup() {
+  try { const r = localStorage.getItem(AUTO_BACKUP_KEY); return r ? JSON.parse(r) : null; }
+  catch(e) { return null; }
+}
+
+function saveAutoBackup() {
+  if (!DB || !DB.length) return;
+  try {
+    localStorage.setItem(AUTO_BACKUP_KEY, JSON.stringify(DB));
+    localStorage.setItem(BACKUP_META_KEY, JSON.stringify({ ts: new Date().toISOString(), count: DB.length }));
+    updateBackupStatus();
+  } catch(e) {}
+}
+
+function updateBackupStatus() {
+  const el = document.getElementById('backup-status');
+  if (!el) return;
+  try {
+    const raw = localStorage.getItem(BACKUP_META_KEY);
+    if (!raw) { el.textContent = 'Sin backup'; return; }
+    const m = JSON.parse(raw);
+    const d = new Date(m.ts);
+    const pad = n => String(n).padStart(2, '0');
+    el.textContent = `${pad(d.getDate())}/${pad(d.getMonth()+1)} ${pad(d.getHours())}:${pad(d.getMinutes())} · ${m.count} ítems`;
+  } catch(e) { el.textContent = 'Sin backup'; }
+}
+
+window.downloadBackupNow = function() {
+  if (!DB || !DB.length) { toast('La colección está vacía', 'warn'); return; }
+  saveAutoBackup();
+  const blob = new Blob([JSON.stringify(DB, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `collectr-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('Backup descargado', 'success');
+};
+
+window.restoreAutoBackup = function() {
+  const bk = getAutoBackup();
+  if (!bk || !bk.length) { toast('No hay backup guardado', 'warn'); return; }
+  let msg = `¿Restaurar backup de ${bk.length} ítems?\nEsto reemplazará la colección actual.`;
+  try {
+    const raw = localStorage.getItem(BACKUP_META_KEY);
+    if (raw) {
+      const m = JSON.parse(raw);
+      msg = `¿Restaurar ${m.count} ítems del backup del ${new Date(m.ts).toLocaleDateString('es-ES')}?\nEsto reemplazará la colección actual.`;
+    }
+  } catch(e) {}
+  if (!confirm(msg)) return;
+  DB = bk;
+  saveLocalDB();
+  renderAll();
+  toast(`Backup restaurado: ${DB.length} ítems`, 'success');
+};
 
 function seedDemo() {
   DB = [
@@ -1535,6 +1607,15 @@ window.addEventListener('online', () => {
   }
 });
 window.addEventListener('offline', () => { setSyncStatus('offline', 'Sin conexión'); });
+
+// ===== AUTO-BACKUP TRIGGERS =====
+// Guarda backup al cerrar o minimizar la ventana/pestaña
+window.addEventListener('beforeunload', () => saveAutoBackup());
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') saveAutoBackup();
+});
+// Backup periódico cada 5 minutos
+setInterval(saveAutoBackup, 5 * 60 * 1000);
 
 // Arranque directo en modo local — todas las asignaciones window.X ya están listas
 signInAsGuest();
