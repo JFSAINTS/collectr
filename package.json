@@ -1,0 +1,63 @@
+{
+  "name": "collectr",
+  "version": "1.0.0",
+  "description": "Cataloga tu colección de videojuegos, películas, libros y más",
+  "main": "electron-main.js",
+  "homepage": "https://jfsaints.github.io/collectr/",
+  "author": "JFSAINTS",
+  "license": "MIT",
+  "scripts": {
+    "electron": "electron .",
+    "build:win": "electron-builder --win --x64",
+    "build:android": "node build-android.js"
+  },
+  "build": {
+    "appId": "io.github.jfsaints.collectr",
+    "productName": "Collectr",
+    "copyright": "JFSAINTS",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "index.html",
+      "app.js",
+      "styles.css",
+      "firebase-config.js",
+      "api-config.js",
+      "sw.js",
+      "manifest.json",
+      "electron-main.js",
+      "icons/**"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "icons/icon-512.png"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Collectr"
+    }
+  },
+  "devDependencies": {
+    "@bubblewrap/core": "^1.24.1",
+    "electron": "^35.7.5",
+    "electron-builder": "^25.1.8"
+  }
+}

@@ -17,3 +17,10 @@ desktop.ini
 .vscode/
 *.swp
 *.swo
+
+# Node / build output
+node_modules/
+package-lock.json
+dist/
+android-twa/
+*.keystore

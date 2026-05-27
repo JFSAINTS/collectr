@@ -3,10 +3,8 @@
 // =============================================
 
 import {
-  auth, db, isFirebaseConfigured,
-  GoogleAuthProvider, FacebookAuthProvider,
-  signInWithPopup, fbSignOut, onAuthStateChanged,
-  doc, setDoc, getDoc, onSnapshot, serverTimestamp
+  db, isFirebaseConfigured,
+  doc, setDoc, onSnapshot, serverTimestamp
 } from './firebase-config.js';
 
 // ===== STATE =====
@@ -41,75 +39,29 @@ const CAT_INFO = {
   other:     { label: 'Otro',          icon: 'ti-package',          badgeClass: 'badge-other',     emoji: '📦' }
 };
 
-// ===== AUTH =====
-window.signInWithGoogle = async () => {
-  if (!isFirebaseConfigured) { toast('Firebase no configurado. Usando modo local.', 'info'); signInAsGuest(); return; }
-  try {
-    const provider = new GoogleAuthProvider();
-    await signInWithPopup(auth, provider);
-  } catch (e) {
-    toast('Error al iniciar sesión con Google: ' + e.message, 'error');
-  }
-};
-
-window.signInWithFacebook = async () => {
-  if (!isFirebaseConfigured) { toast('Firebase no configurado. Usando modo local.', 'info'); signInAsGuest(); return; }
-  try {
-    const provider = new FacebookAuthProvider();
-    await signInWithPopup(auth, provider);
-  } catch (e) {
-    toast('Error al iniciar sesión con Facebook: ' + e.message, 'error');
-  }
-};
-
+// ===== AUTH — modo local únicamente =====
 window.signInAsGuest = () => {
   isGuest = true;
-  currentUser = { uid: 'guest', displayName: 'Invitado', email: '', photoURL: '' };
+  currentUser = { uid: 'guest', displayName: 'Coleccionista', email: '', photoURL: '' };
   loadLocalDB();
   showApp();
 };
 
-window.signOut = async () => {
-  if (confirm('¿Cerrar sesión? Los datos locales se conservarán.')) {
-    stopCamera();
-    if (unsubscribeFirestore) unsubscribeFirestore();
-    if (!isGuest && isFirebaseConfigured) {
-      try { await fbSignOut(auth); } catch(e) {}
-    }
-    currentUser = null; isGuest = false; DB = [];
-    document.getElementById('app').style.display = 'none';
-    document.getElementById('auth-screen').style.display = 'flex';
+window.signOut = () => {
+  if (confirm('¿Borrar todos los datos locales y empezar de nuevo?')) {
+    localStorage.removeItem('collectr_db_v2');
+    location.reload();
   }
 };
 
-// Auth state listener
-if (isFirebaseConfigured) {
-  onAuthStateChanged(auth, (user) => {
-    if (user) {
-      currentUser = user;
-      isGuest = false;
-      subscribeToFirestore();
-      showApp();
-    } else {
-      if (!isGuest) {
-        document.getElementById('app').style.display = 'none';
-        document.getElementById('auth-screen').style.display = 'flex';
-      }
-    }
-  });
-} else {
-  // No Firebase: show auth screen normally
-  document.getElementById('auth-screen').style.display = 'flex';
-}
+// Arranque directo en modo local — sin pantalla de login
+signInAsGuest();
 
 function showApp() {
-  document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('app').style.display = '';
   updateUserUI();
-  if (isGuest || !isFirebaseConfigured) {
-    loadLocalDB();
-    setSyncStatus('offline', 'Modo local');
-  }
+  loadLocalDB();
+  setSyncStatus('offline', 'Modo local');
 }
 
 function updateUserUI() {
