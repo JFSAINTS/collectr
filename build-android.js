@@ -2,8 +2,9 @@
  * build-android.js
  * Construye el APK de Collectr usando @bubblewrap/core directamente.
  */
-const path = require('path');
-const fs   = require('fs');
+const path        = require('path');
+const fs          = require('fs');
+const { execSync } = require('child_process');
 
 // ── Rutas del entorno ──────────────────────────────────────────────────────
 const JAVA_HOME    = 'C:\\Program Files\\Microsoft\\jdk-21.0.11.10-hotspot';
@@ -19,15 +20,12 @@ async function main() {
   const { TwaGenerator }    = require('@bubblewrap/core/dist/lib/TwaGenerator');
   const { JdkHelper }       = require('@bubblewrap/core/dist/lib/jdk/JdkHelper');
   const { KeyTool }         = require('@bubblewrap/core/dist/lib/jdk/KeyTool');
-  const { AndroidSdkTools } = require('@bubblewrap/core/dist/lib/androidSdk/AndroidSdkTools');
-  const { GradleWrapper }   = require('@bubblewrap/core/dist/lib/GradleWrapper');
   const { ConsoleLog }      = require('@bubblewrap/core/dist/lib/Log');
 
   console.log('⚙️  Configurando entorno…');
   const log    = new ConsoleLog('collectr-build');
   const config = new Config(JAVA_HOME, ANDROID_HOME);
   const jdk    = new JdkHelper(process, config);
-  const sdk    = await AndroidSdkTools.create(process, config, jdk, log);
 
   console.log('🌐 Descargando manifiesto web…');
   const twaManifest = await TwaManifest.fromWebManifest('https://jfsaints.github.io/collectr/manifest.json');
@@ -91,10 +89,18 @@ async function main() {
     fs.writeFileSync(buildGradlePath, buildGradle);
   }
 
-  // Compilar APK
+  // Compilar APK con Gradle directamente (GradleWrapper tiene problemas con cwd en Windows)
   console.log('🔨 Compilando APK con Gradle…');
-  const gradle = new GradleWrapper(process, sdk, OUT_DIR);
-  await gradle.assembleRelease();
+  const gradleEnv = Object.assign({}, process.env, {
+    JAVA_HOME,
+    ANDROID_HOME,
+  });
+  execSync('gradlew.bat assembleRelease --stacktrace', {
+    cwd:   OUT_DIR,
+    env:   gradleEnv,
+    stdio: 'inherit',
+    shell: true,
+  });
 
   // Copiar APK al directorio de salida
   const apkSrc = path.join(OUT_DIR, 'app', 'build', 'outputs', 'apk', 'release', 'app-release.apk');
