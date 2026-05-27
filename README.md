@@ -1,220 +1,173 @@
-# Collectr ð¦
+# Collectr
 
-> Tu colecciÃ³n digital. Siempre contigo.
+> Tu coleccion digital. Siempre contigo.
 
-**Collectr** es una Progressive Web App (PWA) para catalogar colecciones de videojuegos, pelÃ­culas, libros, cÃ³mics, DVDs, Blu-rays, mÃºsica y mÃ¡s. Usa inteligencia artificial (Claude de Anthropic) para identificar productos mediante escaneo de cÃ³digos de barras o imÃ¡genes de portadas.
+**Collectr** es una Progressive Web App (PWA) para catalogar colecciones de videojuegos, peliculas, libros, comics, DVDs, Blu-rays, musica y mas. Usa inteligencia artificial (Google Cloud Vision) para identificar productos mediante escaneo de codigos de barras o imagenes de portadas.
 
-![Collectr Screenshot](screenshots/desktop.png)
-
----
-
-## â¨ CaracterÃ­sticas
-
-- ð· **Escaneo por cÃ¡mara** â apunta a un cÃ³digo de barras o portada y la IA lo identifica automÃ¡ticamente
-- ð¼ï¸ **AnÃ¡lisis de imÃ¡genes** â sube fotos de portadas y Claude extrae toda la informaciÃ³n
-- âï¸ **EdiciÃ³n manual** â aÃ±ade o edita cualquier campo manualmente
-- ð **Login con Google o Facebook** â sincronizaciÃ³n automÃ¡tica en la nube con Firebase
-- ð **Modo offline** â funciona sin conexiÃ³n, sincroniza al reconectarse
-- ð± **PWA instalable** â instÃ¡lala en tu mÃ³vil o escritorio como app nativa
-- ðï¸ **Vista cuadrÃ­cula y lista** â visualiza tu colecciÃ³n como quieras
-- â¤ï¸ **Lista de deseos** â marca lo que quieres conseguir
-- ð **EstadÃ­sticas** â grÃ¡ficos de tu colecciÃ³n por categorÃ­a y plataforma
-- ð¤ **ExportaciÃ³n** â descarga en JSON, CSV o HTML visual con portadas
-- ð¥ **ImportaciÃ³n** â importa colecciones desde JSON o CSV
-- â­ **Valoraciones** â puntÃºa tus Ã­tems del 1 al 5
-
-## ðï¸ CategorÃ­as soportadas
-
-| CategorÃ­a | Plataformas detectadas |
-|-----------|----------------------|
-| ð® Videojuegos | PS5, PS4, Xbox, Switch, PC, Game Boy, etc. |
-| ð¬ PelÃ­culas | Blu-ray, 4K UHD, DVD, Digital |
-| ð¿ DVD | Todas las ediciones |
-| ð Blu-ray | BD, 4K UHD, BD-3D |
-| ð Libros | Tapa dura, tapa blanda, bolsillo |
-| ð¦¸ CÃ³mics | Marvel, DC, Manga, Europeo |
-| ðµ MÃºsica | CD, Vinilo, Cassette |
-| ð¦ Otros | Cualquier producto coleccionable |
+Demo en vivo: **https://jfsaints.github.io/collectr/**
 
 ---
 
-## ð ConfiguraciÃ³n e instalaciÃ³n
+## Descargas
 
-### Requisitos previos
-
-1. Una cuenta en [Firebase](https://console.firebase.google.com) (gratuita)
-2. Una API key de [Anthropic](https://console.anthropic.com) para el reconocimiento de imÃ¡genes
-
-### Paso 1 â Configurar Firebase
-
-1. Ve a [Firebase Console](https://console.firebase.google.com)
-2. Crea un nuevo proyecto
-3. Activa **Authentication** â Habilita Google y Facebook como proveedores
-4. Activa **Cloud Firestore** â Crea una base de datos en modo producciÃ³n
-5. Ve a **ConfiguraciÃ³n del proyecto** â **Tus apps** â AÃ±ade una app web
-6. Copia las credenciales
-
-### Paso 2 â Configurar la app
-
-Edita `src/firebase-config.js` y reemplaza las credenciales:
-
-```javascript
-const firebaseConfig = {
-  apiKey: "TU_API_KEY",
-  authDomain: "TU_PROYECTO.firebaseapp.com",
-  projectId: "TU_PROYECTO_ID",
-  storageBucket: "TU_PROYECTO.appspot.com",
-  messagingSenderId: "TU_MESSAGING_SENDER_ID",
-  appId: "TU_APP_ID"
-};
-```
-
-### Paso 3 â Configurar Anthropic API
-
-La API key de Anthropic se gestiona en el backend de Claude.ai cuando usas el widget. Si despliegas la app de forma independiente, aÃ±ade tu API key en `src/app.js`:
-
-```javascript
-headers: {
-  'Content-Type': 'application/json',
-  'x-api-key': 'TU_ANTHROPIC_API_KEY',  // aÃ±ade esta lÃ­nea
-  'anthropic-version': '2023-06-01'
-}
-```
-
-### Paso 4 â Reglas de seguridad de Firestore
-
-Despliega las reglas del archivo `firestore.rules`:
-
-```bash
-firebase deploy --only firestore:rules
-```
-
-O cÃ³pialas manualmente en Firebase Console â Firestore â Reglas.
-
-### Paso 5 â Despliegue
-
-#### Con Firebase Hosting (recomendado)
-
-```bash
-npm install -g firebase-tools
-firebase login
-firebase init hosting
-firebase deploy
-```
-
-#### Con GitHub Pages
-
-1. Ve a tu repositorio en GitHub
-2. Settings â Pages â Source: Deploy from a branch â `main` / `root`
-3. Tu app estarÃ¡ en `https://tuusuario.github.io/collectr`
-
-#### Local (desarrollo)
-
-```bash
-# Con Python
-python3 -m http.server 8080
-
-# Con Node.js
-npx serve .
-
-# Con Live Server (VS Code extension)
-# Abre index.html y haz clic en "Go Live"
-```
+| Plataforma | Archivo | Descripcion |
+|------------|---------|-------------|
+| Windows x64 | [Collectr-1.0.0-setup.exe](https://github.com/JFSAINTS/collectr/releases/download/v1.0.0/Collectr-1.0.0-setup.exe) | Instalador (acceso directo automatico) |
+| Windows x64 | [Collectr-1.0.0-portable.exe](https://github.com/JFSAINTS/collectr/releases/download/v1.0.0/Collectr-1.0.0-portable.exe) | Portable, sin instalacion |
+| Android | [Collectr-android.apk](https://github.com/JFSAINTS/collectr/releases/download/v1.0.0/Collectr-android.apk) | APK directo (activa "fuentes desconocidas") |
+| Navegador / PWA | [jfsaints.github.io/collectr](https://jfsaints.github.io/collectr/) | Instala desde el navegador |
 
 ---
 
-## ð Estructura del proyecto
+## Caracteristicas
+
+- **Escaneo por camara** — apunta a un codigo de barras o portada y la app lo identifica automaticamente
+- **Analisis de imagenes** — sube fotos de portadas y la IA extrae toda la informacion
+- **Busqueda visual de portadas** — muestra opciones de portada similares via Google Images para elegir la correcta
+- **Edicion manual** — añade o edita cualquier campo a mano
+- **Modo local** — funciona sin cuenta ni conexion, datos guardados en el dispositivo
+- **PWA instalable** — instalala en movil o escritorio como app nativa
+- **Vista cuadricula y lista** — visualiza tu coleccion como quieras
+- **Lista de deseos** — marca lo que quieres conseguir
+- **Estadisticas** — graficos de tu coleccion por categoria
+- **Exportacion** — descarga en JSON, CSV o HTML visual con portadas
+- **Importacion** — importa colecciones desde JSON o CSV
+- **Valoraciones** — puntua tus items del 1 al 5
+
+---
+
+## Categorias soportadas
+
+| Categoria | Plataformas detectadas |
+|-----------|------------------------|
+| Videojuegos | PS5, PS4, Xbox, Switch, PC, Game Boy, etc. |
+| Peliculas | Blu-ray, 4K UHD, DVD, Digital |
+| DVD | Todas las ediciones |
+| Blu-ray | BD, 4K UHD, BD-3D |
+| Libros | Tapa dura, tapa blanda, bolsillo |
+| Comics / Manga | Marvel, DC, Manga, Europeo |
+| Musica | CD, Vinilo, Cassette |
+| Juegos de mesa | Cualquier juego de tablero |
+| Figuras | Figuras coleccionables |
+| Otros | Cualquier producto coleccionable |
+
+---
+
+## Uso rapido
+
+### Añadir un item
+
+1. **Camara**: pulsa "Añadir" > pestana "Camara" > apunta al codigo de barras o portada > "Capturar"
+2. **Imagen**: pulsa "Añadir" > pestana "Imagen" > sube una foto de la portada
+3. **Manual**: pulsa "Añadir" > pestana "Manual" > rellena los campos
+
+### Exportar tu coleccion
+
+1. Pulsa "Exportar" en el menu lateral
+2. Elige formato: JSON (importable), CSV (Excel) o HTML visual
+3. El archivo se descarga automaticamente
+
+### Instalar como app (PWA)
+
+Al visitar la web aparece un banner para instalar Collectr. Tambien puedes ir al menu del navegador > "Instalar aplicacion" o "Añadir a pantalla de inicio".
+
+---
+
+## Estructura del proyecto
 
 ```
 collectr/
-âââ index.html              # Entrada principal de la app
-âââ manifest.json           # Manifiesto PWA
-âââ sw.js                   # Service Worker (offline)
-âââ firestore.rules         # Reglas de seguridad Firebase
-âââ src/
-â   âââ app.js              # LÃ³gica principal de la aplicaciÃ³n
-â   âââ firebase-config.js  # ConfiguraciÃ³n Firebase + Auth
-â   âââ styles.css          # Estilos completos
-âââ icons/
-â   âââ icon-192.png        # Icono PWA 192x192
-â   âââ icon-512.png        # Icono PWA 512x512
-âââ README.md
+├── index.html          — App principal
+├── app.js              — Logica de la aplicacion
+├── styles.css          — Estilos
+├── firebase-config.js  — Configuracion Firebase (solo Firestore, sin auth)
+├── api-config.js       — API keys (no incluido en el repo)
+├── manifest.json       — Manifiesto PWA
+├── sw.js               — Service Worker (offline)
+├── electron-main.js    — Proceso principal Electron (Windows)
+├── package.json        — Configuracion electron-builder
+├── build-android.js    — Script de compilacion Android (TWA)
+└── icons/
+    ├── icon-192.png
+    └── icon-512.png
 ```
 
 ---
 
-## ð§ Uso
+## Compilar localmente
 
-### AÃ±adir un Ã­tem
+### Requisitos
 
-1. **CÃ¡mara**: Toca "AÃ±adir" â pestaÃ±a "CÃ¡mara" â apunta al cÃ³digo de barras o portada â "Capturar"
-2. **Imagen**: Toca "AÃ±adir" â pestaÃ±a "Imagen" â sube una foto de la portada
-3. **Manual**: Toca "AÃ±adir" â pestaÃ±a "Manual" â rellena los campos
+- Node.js 18+
+- Para Android: JDK 21 + Android SDK
 
-### Exportar tu colecciÃ³n
+### Instalar dependencias
 
-1. Toca "Exportar" en el menÃº lateral
-2. Elige el formato: JSON (importable), CSV (Excel) o HTML visual
-3. El archivo se descarga automÃ¡ticamente con fecha y hora
+```bash
+npm install
+```
 
-### Importar una colecciÃ³n
+### Windows x64
 
-1. Toca "Importar" en el menÃº lateral
-2. Arrastra o selecciona tu archivo JSON o CSV
-3. Los nuevos Ã­tems se fusionan con tu colecciÃ³n existente
+```bash
+npm run build:win
+# Genera dist/Collectr-1.0.0-portable.exe y dist/Collectr Setup 1.0.0.exe
+```
 
-### Instalar como app
+### Android APK
 
-Cuando visites la web, verÃ¡s un banner para instalar Collectr en tu dispositivo. TambiÃ©n puedes hacerlo desde el menÃº del navegador â "Instalar aplicaciÃ³n" o "AÃ±adir a pantalla de inicio".
+```bash
+node build-android.js
+# Genera dist/Collectr-android.apk
+```
 
----
+### Servidor de desarrollo local
 
-## ð ï¸ TecnologÃ­as
-
-| TecnologÃ­a | Uso |
-|-----------|-----|
-| **HTML/CSS/JS** | App sin frameworks, vanilla |
-| **Firebase Auth** | AutenticaciÃ³n Google + Facebook |
-| **Cloud Firestore** | Base de datos en tiempo real |
-| **Claude AI (Anthropic)** | Reconocimiento de imÃ¡genes y cÃ³digos |
-| **Service Worker** | Funcionamiento offline |
-| **Web Manifest** | InstalaciÃ³n como PWA |
-| **MediaDevices API** | Acceso a cÃ¡mara |
-| **LocalStorage** | Persistencia local offline |
+```bash
+python -m http.server 3456
+# Abre http://localhost:3456/index.html
+```
 
 ---
 
-## ð± Compatibilidad
+## Tecnologias
+
+| Tecnologia | Uso |
+|------------|-----|
+| HTML / CSS / JS | App vanilla sin frameworks |
+| Google Cloud Vision API | Reconocimiento de portadas y codigos |
+| Firebase Firestore | Base de datos (opcional, modo local por defecto) |
+| ZXing | Lectura de codigos de barras desde camara |
+| Service Worker | Funcionamiento offline |
+| Electron | App de escritorio Windows |
+| Bubblewrap / TWA | App Android |
+
+---
+
+## Compatibilidad
 
 | Plataforma | Soporte |
-|-----------|---------|
-| Chrome / Edge (desktop) | â Completo |
-| Safari (iOS 16.4+) | â PWA + cÃ¡mara |
-| Chrome (Android) | â Completo |
-| Firefox | â Sin install prompt |
-| Samsung Internet | â Completo |
+|------------|---------|
+| Chrome / Edge (desktop) | Completo |
+| Chrome (Android) | Completo |
+| Safari (iOS 16.4+) | PWA + camara |
+| Firefox | Sin install prompt |
+| Samsung Internet | Completo |
+| Windows x64 | App Electron |
+| Android 5.0+ | APK TWA |
 
 ---
 
-## ð¤ Contribuir
+## Licencia
 
-1. Fork del repositorio
-2. Crea una rama: `git checkout -b feature/nueva-funcionalidad`
-3. Commit: `git commit -m 'Add: nueva funcionalidad'`
-4. Push: `git push origin feature/nueva-funcionalidad`
-5. Abre un Pull Request
+MIT — usala, modificala y compartela libremente.
 
 ---
 
-## ð Licencia
+## Creditos
 
-MIT License â Ãºsala, modifÃ­cala y compÃ¡rtela libremente.
-
----
-
-## ð CrÃ©ditos
-
-- [Anthropic Claude](https://anthropic.com) â reconocimiento de imÃ¡genes con IA
-- [Firebase](https://firebase.google.com) â autenticaciÃ³n y base de datos
-- [Tabler Icons](https://tabler.io/icons) â iconografÃ­a
-- [Google Fonts](https://fonts.google.com) â tipografÃ­a (Space Grotesk + DM Serif Display)
+- [Google Cloud Vision](https://cloud.google.com/vision) — reconocimiento de imagenes e IA
+- [Firebase](https://firebase.google.com) — base de datos opcional
+- [Tabler Icons](https://tabler.io/icons) — iconografia
+- [Google Fonts](https://fonts.google.com) — tipografia (Space Grotesk)
+- [ZXing](https://github.com/zxing-js/library) — lectura de codigos de barras
