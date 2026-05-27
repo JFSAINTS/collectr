@@ -54,8 +54,7 @@ window.signOut = () => {
   }
 };
 
-// Arranque directo en modo local — sin pantalla de login
-signInAsGuest();
+// signInAsGuest() se llama al final del archivo, después de todas las asignaciones de window.X
 
 function showApp() {
   document.getElementById('app').style.display = '';
@@ -1536,3 +1535,6 @@ window.addEventListener('online', () => {
   }
 });
 window.addEventListener('offline', () => { setSyncStatus('offline', 'Sin conexión'); });
+
+// Arranque directo en modo local — todas las asignaciones window.X ya están listas
+signInAsGuest();
