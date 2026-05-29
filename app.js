@@ -4,7 +4,7 @@
 
 import {
   db, isFirebaseConfigured,
-  doc, setDoc, onSnapshot, serverTimestamp
+  doc, setDoc, getDoc, onSnapshot, serverTimestamp
 } from './firebase-config.js';
 
 // ===== STATE =====
@@ -144,6 +144,11 @@ const LS_KEY = 'collectr_db_v2';
 const AUTO_BACKUP_KEY  = 'collectr_auto_bk';
 const BACKUP_META_KEY  = 'collectr_auto_bk_meta';
 
+// ── BD comunitaria ────────────────────────────────────────────────────────────
+const GLOBAL_DB_COL   = 'productos_globales';
+const CONTRIB_TS_KEY  = 'collectr_last_contrib';  // última contribución (throttle)
+const CONTRIB_MIN_MS  = 30_000;                    // mínimo 30 s entre contribuciones
+
 function loadLocalRaw() {
   try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]'); } catch(e) { return []; }
 }
@@ -227,6 +232,72 @@ window.restoreAutoBackup = function() {
   renderAll();
   toast(`Backup restaurado: ${DB.length} ítems`, 'success');
 };
+
+// ===== BASE DE DATOS COMUNITARIA =====
+
+/** Consulta si un código de barras ya existe en la BD comunitaria. */
+async function checkGlobalDB(barcode) {
+  if (!isFirebaseConfigured || !barcode || barcode.length < 4) return null;
+  try {
+    const snap = await getDoc(doc(db, GLOBAL_DB_COL, barcode));
+    if (!snap.exists()) return null;
+    const d = snap.data();
+    return {
+      name:         d.name      || '',
+      category:     d.category  || 'other',
+      year:         d.year      || '',
+      platform:     d.platform  || '',
+      publisher:    d.publisher || '',
+      genre:        d.genre     || '',
+      cover:        d.cover     || '',
+      barcode,
+      confidence:   'high',
+      fromGlobalDB: true
+    };
+  } catch(e) { return null; }
+}
+
+/**
+ * Envía los datos de un ítem a la BD comunitaria en segundo plano.
+ * - Solo actúa si el ítem tiene código de barras y datos mínimos.
+ * - Throttle: mínimo 30 s entre contribuciones (localStorage).
+ * - No sobreescribe si el producto ya existe.
+ * - Nunca bloquea al usuario (todos los errores son silenciosos).
+ */
+async function contributeToGlobalDB(item) {
+  if (!isFirebaseConfigured) return;
+  if (!item.barcode || item.barcode.length < 4) return;
+  if (!item.name || !item.category) return;
+
+  // Throttle anti-bot (velocidad humana)
+  const lastTs = parseInt(localStorage.getItem(CONTRIB_TS_KEY) || '0');
+  const now    = Date.now();
+  if (now - lastTs < CONTRIB_MIN_MS) return;
+
+  try {
+    // No sobreescribir si ya existe
+    const snap = await getDoc(doc(db, GLOBAL_DB_COL, item.barcode));
+    if (snap.exists()) return;
+
+    await setDoc(doc(db, GLOBAL_DB_COL, item.barcode), {
+      barcode:        item.barcode,
+      name:           item.name.slice(0, 200),
+      category:       item.category,
+      year:           (item.year      || '').slice(0, 10),
+      platform:       (item.platform  || '').slice(0, 100),
+      publisher:      (item.publisher || '').slice(0, 100),
+      genre:          (item.genre     || '').slice(0, 100),
+      cover:          (item.cover     || '').slice(0, 500),
+      contributed_at: serverTimestamp()
+    });
+
+    localStorage.setItem(CONTRIB_TS_KEY, String(now));
+    setTimeout(() => toast('Datos compartidos con la comunidad 🌐', 'info'), 400);
+  } catch(e) {
+    // Nunca interrumpir al usuario
+    console.warn('[Collectr] contributeToGlobalDB:', e.message);
+  }
+}
 
 function seedDemo() {
   DB = [
@@ -842,6 +913,17 @@ function stopBarcodeAutoscan() {
 // Otro EAN → TMDB || búsqueda legacy (Open Library + UPC Item DB)
 // =============================================
 async function identifyByBarcode(barcode, statusId) {
+  // ── 0. Base de datos comunitaria (1 lectura, instantáneo) ────────────────
+  if (isFirebaseConfigured) {
+    setStatus(statusId, 'loading', 'Consultando base de datos de la comunidad...');
+    const globalResult = await checkGlobalDB(barcode);
+    if (globalResult) {
+      setStatus(statusId, 'success', '¡Encontrado en la base de datos de la comunidad!');
+      return globalResult;
+    }
+  }
+
+  // ── 1. APIs externas ─────────────────────────────────────────────────────
   const isISBN = barcode.startsWith('978') || barcode.startsWith('979');
   if (isISBN) {
     setStatus(statusId, 'loading', 'ISBN detectado — buscando en Google Books...');
@@ -1214,14 +1296,16 @@ function fillResultForm(data) {
       const coverHtml = data.cover
         ? `<img src="${esc(data.cover)}" alt="" onerror="this.style.display='none';this.parentElement.textContent='${ci.emoji}'">`
         : ci.emoji;
-      slot.innerHTML = `<div class="detection-banner">
+      slot.innerHTML = `<div class="detection-banner${data.fromGlobalDB ? ' detection-banner--community' : ''}">
         <div class="detection-banner-cover">${coverHtml}</div>
         <div class="detection-banner-info">
           <div class="detection-banner-name">${esc(data.name)}</div>
           <div class="detection-banner-meta">
             <span class="item-badge ${ci.badgeClass}" style="position:static;display:inline-block">${ci.label}</span>
             ${data.platform ? `<span style="font-size:0.72rem;color:var(--text3)">${esc(data.platform)}</span>` : ''}
-            <span class="detection-confidence">Confianza: ${confLabel}</span>
+            ${data.fromGlobalDB
+              ? `<span class="community-badge"><i class="ti ti-world"></i> Base comunitaria</span>`
+              : `<span class="detection-confidence">Confianza: ${confLabel}</span>`}
           </div>
         </div>
         <i class="ti ti-circle-check detection-check" aria-hidden="true"></i>
@@ -1294,6 +1378,10 @@ window.addItemFromModal = () => {
   } else {
     DB.unshift(item);
     toast(`"${item.name}" añadido a tu colección`, 'success');
+    // Contribuir a la BD comunitaria en segundo plano (solo ítems nuevos con código)
+    if (item.barcode && item.barcode.length >= 4) {
+      contributeToGlobalDB(item);
+    }
   }
   scheduleSave();
   renderAll();

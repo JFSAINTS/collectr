@@ -569,6 +569,20 @@ select option { background: var(--bg2); color: var(--text); }
 .detection-confidence { font-size: 0.65rem; color: var(--accent3); background: rgba(124,106,247,0.12); padding: 1px 7px; border-radius: 20px; font-weight: 600; }
 .detection-check { color: var(--success); font-size: 1.1rem; flex-shrink: 0; }
 
+/* BD comunitaria — badge y variante del banner */
+.community-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 0.65rem; font-weight: 700; letter-spacing: 0.02em;
+  color: #34d399; background: rgba(52,211,153,0.12);
+  border: 1px solid rgba(52,211,153,0.3);
+  padding: 2px 8px; border-radius: 20px;
+}
+.community-badge .ti { font-size: 0.7rem; }
+.detection-banner--community {
+  background: linear-gradient(135deg, rgba(52,211,153,0.10), rgba(52,211,153,0.04));
+  border-color: rgba(52,211,153,0.25);
+}
+
 /* COVER PICKER */
 .cover-picker { margin: 0.5rem 0 0.75rem; background: var(--bg3); border-radius: var(--radius-sm); padding: 0.75rem; border: 1px solid var(--border); }
 .cover-picker-label { font-size: 0.74rem; color: var(--text2); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem; }

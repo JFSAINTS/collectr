@@ -1,12 +1,58 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Users can only read/write their own collection
+
+    // ── Colección privada de usuarios (sin cambios) ───────────────────────────
     match /users/{userId}/collection/{document=**} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
-    
-    // Deny everything else
+
+    // ── Base de datos comunitaria de productos ────────────────────────────────
+    // Cualquiera puede leer. Solo se puede crear, nunca modificar ni borrar.
+    match /productos_globales/{barcode} {
+
+      allow read: if true;
+
+      allow create: if
+        // El barcode del documento coincide con el ID
+        barcode == request.resource.data.barcode &&
+        request.resource.data.barcode is string &&
+        request.resource.data.barcode.size() >= 4 &&
+        request.resource.data.barcode.size() <= 30 &&
+
+        // Nombre obligatorio y acotado
+        request.resource.data.name is string &&
+        request.resource.data.name.size() >= 1 &&
+        request.resource.data.name.size() <= 200 &&
+
+        // Categoría debe ser una de las permitidas
+        request.resource.data.category in [
+          'game','movie','dvd','bluray','book',
+          'comic','manga','music','boardgame','figure','other'
+        ] &&
+
+        // Campos opcionales: solo texto, tamaño máximo
+        request.resource.data.year      is string &&
+        request.resource.data.year.size()      <= 10 &&
+        request.resource.data.platform  is string &&
+        request.resource.data.platform.size()  <= 100 &&
+        request.resource.data.publisher is string &&
+        request.resource.data.publisher.size() <= 100 &&
+        request.resource.data.genre     is string &&
+        request.resource.data.genre.size()     <= 100 &&
+
+        // La portada es solo URL (no binario), máximo 500 chars
+        request.resource.data.cover is string &&
+        request.resource.data.cover.size() <= 500 &&
+
+        // Timestamp obligatorio y debe ser del servidor (anti-replay, anti-bot)
+        request.resource.data.contributed_at == request.time;
+
+      // Nadie puede modificar ni borrar — los datos son permanentes
+      allow update, delete: if false;
+    }
+
+    // ── Denegar todo lo demás ─────────────────────────────────────────────────
     match /{document=**} {
       allow read, write: if false;
     }
