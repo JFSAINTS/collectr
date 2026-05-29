@@ -12,20 +12,42 @@ Demo en vivo: **https://jfsaints.github.io/collectr/**
 
 | Plataforma | Archivo | Descripcion |
 |------------|---------|-------------|
-| Windows x64 | [Collectr-1.0.1-setup.exe](https://github.com/JFSAINTS/collectr/releases/download/v1.0.1/Collectr-1.0.1-setup.exe) | Instalador (acceso directo automatico) |
-| Windows x64 | [Collectr-1.0.1-portable.exe](https://github.com/JFSAINTS/collectr/releases/download/v1.0.1/Collectr-1.0.1-portable.exe) | Portable, sin instalacion |
-| Android | [Collectr-android.apk](https://github.com/JFSAINTS/collectr/releases/download/v1.0.1/Collectr-android.apk) | APK directo (activa "fuentes desconocidas") |
+| Windows x64 | [Collectr-1.0.2-setup.exe](https://github.com/JFSAINTS/collectr/releases/download/v1.0.2/Collectr-1.0.2-setup.exe) | Instalador (acceso directo automatico) |
+| Windows x64 | [Collectr-1.0.2-portable.exe](https://github.com/JFSAINTS/collectr/releases/download/v1.0.2/Collectr-1.0.2-portable.exe) | Portable, sin instalacion |
+| Android | [Collectr-android.apk](https://github.com/JFSAINTS/collectr/releases/download/v1.0.2/Collectr-android.apk) | APK directo (activa "fuentes desconocidas") |
 | Navegador / PWA | [jfsaints.github.io/collectr](https://jfsaints.github.io/collectr/) | Instala desde el navegador |
+
+---
+
+## Novedades en v1.0.2 — Base de datos comunitaria
+
+Collectr ahora incluye una base de datos colaborativa y anonima donde los usuarios comparten informacion de productos entre si.
+
+### Como funciona
+
+**Al escanear un codigo de barras**, la app consulta primero la base de datos comunitaria (una sola lectura instantanea). Si el producto ya fue registrado por otro usuario, los datos aparecen al momento con el badge verde "Base comunitaria". Si no existe, la app busca en las APIs externas de siempre.
+
+**Al guardar un item nuevo con codigo de barras**, la app envia automaticamente una copia anonima de los datos (nombre, categoria, plataforma, etc.) a la base de datos comunitaria en segundo plano. Sin imagenes, sin datos personales, solo texto y URL de portada. El proximo usuario que escanee ese mismo codigo lo tendra disponible de inmediato.
+
+### Privacidad y seguridad
+
+- Completamente anonimo: no se almacena ninguna informacion del usuario
+- Solo texto y URLs: ningun archivo binario ni imagen se sube al servidor
+- Inmutable: los datos subidos no pueden ser modificados ni borrados desde la app
+- Validacion estricta en servidor: Firebase rechaza cualquier dato que no cumpla el esquema
+- Throttle de 30 segundos entre contribuciones para evitar abuso automatizado
 
 ---
 
 ## Caracteristicas
 
+- **Base de datos comunitaria** — productos escaneados por otros usuarios disponibles al instante
 - **Escaneo por camara** — apunta a un codigo de barras o portada y la app lo identifica automaticamente
 - **Analisis de imagenes** — sube fotos de portadas y la IA extrae toda la informacion
 - **Busqueda visual de portadas** — muestra opciones de portada similares via Google Images para elegir la correcta
 - **Edicion manual** — añade o edita cualquier campo a mano
 - **Modo local** — funciona sin cuenta ni conexion, datos guardados en el dispositivo
+- **Backup automatico** — copia de seguridad al cerrar la app, restauracion automatica al arrancar
 - **PWA instalable** — instalala en movil o escritorio como app nativa
 - **Vista cuadricula y lista** — visualiza tu coleccion como quieras
 - **Lista de deseos** — marca lo que quieres conseguir
@@ -33,7 +55,6 @@ Demo en vivo: **https://jfsaints.github.io/collectr/**
 - **Exportacion** — descarga en JSON, CSV o HTML visual con portadas
 - **Importacion** — importa colecciones desde JSON o CSV
 - **Valoraciones** — puntua tus items del 1 al 5
-- **Backup automatico** — copia de seguridad automatica al cerrar la app o el navegador, con restauracion al arrancar si se detecta coleccion vacia
 
 ---
 
@@ -68,6 +89,12 @@ Demo en vivo: **https://jfsaints.github.io/collectr/**
 2. Elige formato: JSON (importable), CSV (Excel) o HTML visual
 3. El archivo se descarga automaticamente
 
+### Backup y restauracion
+
+- La app hace backup automatico al cerrar la ventana o cambiar de pestana
+- Si la coleccion aparece vacia al arrancar, la app la restaura automaticamente desde el ultimo backup
+- Boton "Backup manual" en el menu lateral para descargar el archivo JSON en cualquier momento
+
 ### Instalar como app (PWA)
 
 Al visitar la web aparece un banner para instalar Collectr. Tambien puedes ir al menu del navegador > "Instalar aplicacion" o "Añadir a pantalla de inicio".
@@ -81,16 +108,15 @@ collectr/
 ├── index.html          — App principal
 ├── app.js              — Logica de la aplicacion
 ├── styles.css          — Estilos
-├── firebase-config.js  — Configuracion Firebase (solo Firestore, sin auth)
+├── firebase-config.js  — Configuracion Firebase (Firestore para BD comunitaria)
 ├── api-config.js       — API keys (no incluido en el repo)
 ├── manifest.json       — Manifiesto PWA
 ├── sw.js               — Service Worker (offline)
+├── firestore.rules     — Reglas de seguridad Firestore
 ├── electron-main.js    — Proceso principal Electron (Windows)
 ├── package.json        — Configuracion electron-builder
 ├── build-android.js    — Script de compilacion Android (TWA)
-└── icons/
-    ├── icon-192.png
-    └── icon-512.png
+└── icons/              — Iconos PWA en todos los tamanios
 ```
 
 ---
@@ -112,7 +138,7 @@ npm install
 
 ```bash
 npm run build:win
-# Genera dist/Collectr-1.0.0-portable.exe y dist/Collectr Setup 1.0.0.exe
+# Genera dist/Collectr-1.0.2-portable.exe y dist/Collectr Setup 1.0.2.exe
 ```
 
 ### Android APK
@@ -137,7 +163,7 @@ python -m http.server 3456
 |------------|-----|
 | HTML / CSS / JS | App vanilla sin frameworks |
 | Google Cloud Vision API | Reconocimiento de portadas y codigos |
-| Firebase Firestore | Base de datos (opcional, modo local por defecto) |
+| Firebase Firestore | Base de datos comunitaria de productos |
 | ZXing | Lectura de codigos de barras desde camara |
 | Service Worker | Funcionamiento offline |
 | Electron | App de escritorio Windows |
@@ -168,7 +194,7 @@ MIT — usala, modificala y compartela libremente.
 ## Creditos
 
 - [Google Cloud Vision](https://cloud.google.com/vision) — reconocimiento de imagenes e IA
-- [Firebase](https://firebase.google.com) — base de datos opcional
+- [Firebase](https://firebase.google.com) — base de datos comunitaria
 - [Tabler Icons](https://tabler.io/icons) — iconografia
 - [Google Fonts](https://fonts.google.com) — tipografia (Space Grotesk)
 - [ZXing](https://github.com/zxing-js/library) — lectura de codigos de barras

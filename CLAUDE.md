@@ -251,6 +251,19 @@ git -C D:\CATALOGA push origin main
 
 ---
 
+## Cambios sesión 2026-05-29 (v1.0.2)
+
+### Base de datos comunitaria crowdsourced
+- **Colección Firestore:** `productos_globales` — barcode como ID de documento.
+- **`checkGlobalDB(barcode)`**: consulta antes de cualquier API externa. 1 lectura Firestore. Devuelve objeto con `fromGlobalDB:true`.
+- **`contributeToGlobalDB(item)`**: al guardar ítem nuevo con barcode, envía en background si no existe ya. Throttle `CONTRIB_MIN_MS=30000ms` vía `CONTRIB_TS_KEY` en localStorage. Silencioso (nunca bloquea al usuario).
+- **`identifyByBarcode()`**: prepend de la consulta comunitaria antes del flujo de APIs.
+- **`addItemFromModal()`**: llama a `contributeToGlobalDB()` para ítems nuevos con barcode.
+- **Badge visual**: `detection-banner--community` + `.community-badge` (verde) cuando el resultado viene de la BD comunitaria.
+- **`firestore.rules`**: nueva regla para `productos_globales` — `allow read:true`, `allow create` con validación de esquema + `contributed_at == request.time` (serverTimestamp anti-replay), `allow update/delete:false`.
+- **`firebase-config.js`**: `getDoc` ya exportado, añadido al import de `app.js`.
+- Script v7.
+
 ## Cambios sesión 2026-05-27
 
 - **Nuevo icono**: diseño de estantería de libros generado con Pillow desde imagen de referencia del usuario. 7 tamaños PNG + ICO multi-size. `package.json` usa `icons/icon.ico` para Electron.
