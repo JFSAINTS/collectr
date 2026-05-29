@@ -913,7 +913,22 @@ function stopBarcodeAutoscan() {
 // Otro EAN → TMDB || búsqueda legacy (Open Library + UPC Item DB)
 // =============================================
 async function identifyByBarcode(barcode, statusId) {
-  // ── 0. Base de datos comunitaria (1 lectura, instantáneo) ────────────────
+  // ── 0. Colección local del usuario (0 coste, sin red) ────────────────────
+  const localMatch = DB.find(x => x.barcode === barcode);
+  if (localMatch) {
+    const isWish = localMatch.wishlist || localMatch.estado === 'quiero';
+    setStatus(statusId, 'info',
+      isWish ? 'Este ítem está en tu lista de deseos.' : 'Ya tienes este ítem en tu colección.');
+    return {
+      ...localMatch,
+      fromLocalDB: true,
+      // Resetea campos personales para que el usuario los rellene de nuevo
+      notas:  '',
+      estado: isWish ? 'tengo' : localMatch.estado,
+    };
+  }
+
+  // ── 1. Base de datos comunitaria (1 lectura, instantáneo) ────────────────
   if (isFirebaseConfigured) {
     setStatus(statusId, 'loading', 'Consultando base de datos de la comunidad...');
     const globalResult = await checkGlobalDB(barcode);
@@ -923,7 +938,7 @@ async function identifyByBarcode(barcode, statusId) {
     }
   }
 
-  // ── 1. APIs externas ─────────────────────────────────────────────────────
+  // ── 2. APIs externas ─────────────────────────────────────────────────────
   const isISBN = barcode.startsWith('978') || barcode.startsWith('979');
   if (isISBN) {
     setStatus(statusId, 'loading', 'ISBN detectado — buscando en Google Books...');
@@ -1296,19 +1311,37 @@ function fillResultForm(data) {
       const coverHtml = data.cover
         ? `<img src="${esc(data.cover)}" alt="" onerror="this.style.display='none';this.parentElement.textContent='${ci.emoji}'">`
         : ci.emoji;
-      slot.innerHTML = `<div class="detection-banner${data.fromGlobalDB ? ' detection-banner--community' : ''}">
+      const isWish = data.wishlist || data.estado === 'quiero';
+      const bannerClass = data.fromLocalDB   ? ' detection-banner--duplicate'
+                        : data.fromGlobalDB  ? ' detection-banner--community'
+                        : '';
+      const metaExtra = data.fromLocalDB
+        ? `<span class="duplicate-badge">
+             <i class="ti ${isWish ? 'ti-heart' : 'ti-check'}"></i>
+             ${isWish ? 'En tu lista de deseos' : 'Ya en tu colección'}
+           </span>`
+        : data.fromGlobalDB
+        ? `<span class="community-badge"><i class="ti ti-world"></i> Base comunitaria</span>`
+        : `<span class="detection-confidence">Confianza: ${confLabel}</span>`;
+      const notice = data.fromLocalDB
+        ? `<div class="duplicate-notice">Revisa los datos y pulsa Guardar para añadir otra copia.</div>`
+        : '';
+      const checkIcon = data.fromLocalDB
+        ? `<i class="ti ti-copy detection-check" style="color:var(--warn)" aria-hidden="true"></i>`
+        : `<i class="ti ti-circle-check detection-check" aria-hidden="true"></i>`;
+
+      slot.innerHTML = `<div class="detection-banner${bannerClass}">
         <div class="detection-banner-cover">${coverHtml}</div>
         <div class="detection-banner-info">
           <div class="detection-banner-name">${esc(data.name)}</div>
           <div class="detection-banner-meta">
             <span class="item-badge ${ci.badgeClass}" style="position:static;display:inline-block">${ci.label}</span>
             ${data.platform ? `<span style="font-size:0.72rem;color:var(--text3)">${esc(data.platform)}</span>` : ''}
-            ${data.fromGlobalDB
-              ? `<span class="community-badge"><i class="ti ti-world"></i> Base comunitaria</span>`
-              : `<span class="detection-confidence">Confianza: ${confLabel}</span>`}
+            ${metaExtra}
           </div>
+          ${notice}
         </div>
-        <i class="ti ti-circle-check detection-check" aria-hidden="true"></i>
+        ${checkIcon}
       </div>`;
     } else {
       slot.innerHTML = '';

@@ -569,6 +569,23 @@ select option { background: var(--bg2); color: var(--text); }
 .detection-confidence { font-size: 0.65rem; color: var(--accent3); background: rgba(124,106,247,0.12); padding: 1px 7px; border-radius: 20px; font-weight: 600; }
 .detection-check { color: var(--success); font-size: 1.1rem; flex-shrink: 0; }
 
+/* Duplicado — banner de aviso "ya tienes este ítem" */
+.detection-banner--duplicate {
+  background: linear-gradient(135deg, rgba(245,158,11,0.10), rgba(245,158,11,0.04));
+  border-color: rgba(245,158,11,0.30);
+}
+.duplicate-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 0.65rem; font-weight: 700;
+  color: var(--warn); background: rgba(245,158,11,0.12);
+  border: 1px solid rgba(245,158,11,0.30);
+  padding: 2px 8px; border-radius: 20px;
+}
+.duplicate-badge .ti { font-size: 0.7rem; }
+.duplicate-notice {
+  font-size: 0.7rem; color: var(--text3); margin-top: 5px; line-height: 1.4;
+}
+
 /* BD comunitaria — badge y variante del banner */
 .community-badge {
   display: inline-flex; align-items: center; gap: 4px;
