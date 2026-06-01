@@ -12,10 +12,23 @@ Demo en vivo: **https://jfsaints.github.io/collectr/**
 
 | Plataforma | Archivo | Descripcion |
 |------------|---------|-------------|
-| Windows x64 | [Collectr-1.0.2-setup.exe](https://github.com/JFSAINTS/collectr/releases/download/v1.0.2/Collectr-1.0.2-setup.exe) | Instalador (acceso directo automatico) |
-| Windows x64 | [Collectr-1.0.2-portable.exe](https://github.com/JFSAINTS/collectr/releases/download/v1.0.2/Collectr-1.0.2-portable.exe) | Portable, sin instalacion |
-| Android | [Collectr-android.apk](https://github.com/JFSAINTS/collectr/releases/download/v1.0.2/Collectr-android.apk) | APK directo (activa "fuentes desconocidas") |
+| Windows x64 | [Collectr-1.0.3-setup.exe](https://github.com/JFSAINTS/collectr/releases/download/v1.0.3/Collectr-1.0.3-setup.exe) | Instalador (acceso directo automatico) |
+| Windows x64 | [Collectr-1.0.3-portable.exe](https://github.com/JFSAINTS/collectr/releases/download/v1.0.3/Collectr-1.0.3-portable.exe) | Portable, sin instalacion |
+| Android | [Collectr-android.apk](https://github.com/JFSAINTS/collectr/releases/download/v1.0.3/Collectr-android.apk) | APK directo (activa "fuentes desconocidas") |
 | Navegador / PWA | [jfsaints.github.io/collectr](https://jfsaints.github.io/collectr/) | Instala desde el navegador |
+
+---
+
+## Novedades en v1.0.3
+
+### Aviso de duplicado al escanear
+Si escaneas un codigo de barras que ya esta en tu coleccion, la app lo detecta al instante (sin gastar ninguna consulta de red) y muestra un aviso en amarillo con la opcion de añadir otra copia de todas formas.
+
+### Mas fuentes de busqueda sin coste
+- **MusicBrainz + Cover Art Archive** — lookup directo por codigo de barras para CDs, vinilos y cassettes, con portada automatica
+- **Wikidata SPARQL** — base de conocimiento libre con cobertura muy amplia: figuras, juguetes, ediciones especiales y productos que ninguna otra base de datos tiene
+- **TVmaze** — series de television, gratuito y sin clave
+- **Open Library por titulo** — suplementa Google Books para busquedas de libros y manga por titulo
 
 ---
 
