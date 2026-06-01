@@ -783,6 +783,8 @@ async function decodeBarcodeFromImage(base64) {
 
 async function lookupBarcode(code) {
   const apis = [
+
+    // ── Open Library (ISBN / libros) ──────────────────────────────────────
     async (c) => {
       const r = await fetch('https://openlibrary.org/api/books?bibkeys=ISBN:' + c + '&format=json&jscmd=data', { signal: AbortSignal.timeout(5000) });
       const d = await r.json();
@@ -790,10 +792,47 @@ async function lookupBarcode(code) {
       if (!d[key]) return null;
       const b = d[key];
       const subjects = (b.subjects||[]).slice(0,3).map(s=>s.name||s).join(', ');
-      return { name: b.title, category: 'book', year: b.publish_date ? b.publish_date.match(/\d{4}/)?.[0] : '',
-        platform: b.physical_format || 'Tapa blanda', publisher: (b.publishers||[]).map(p=>p.name||p).join(', '),
-        genre: subjects, desc: '', cover: b.cover?.large || b.cover?.medium || '', barcode: c, confidence: 'high' };
+      // Portada: intenta la API primero, si no, usa el CDN de Open Library directamente
+      const cover = b.cover?.large || b.cover?.medium ||
+                    `https://covers.openlibrary.org/b/isbn/${c}-L.jpg`;
+      return { name: b.title, category: 'book',
+        year: b.publish_date ? b.publish_date.match(/\d{4}/)?.[0] : '',
+        platform: b.physical_format || 'Tapa blanda',
+        publisher: (b.publishers||[]).map(p=>p.name||p).join(', '),
+        genre: subjects, desc: '', cover, barcode: c, confidence: 'high' };
     },
+
+    // ── MusicBrainz — música física (CD, vinilo, cassette…) ──────────────
+    // API abierta, sin clave, sin registro. Rate limit: 1 req/s.
+    async (c) => {
+      const r = await fetch(
+        `https://musicbrainz.org/ws/2/release?barcode=${encodeURIComponent(c)}&fmt=json&inc=artist-credits+labels+media`,
+        { signal: AbortSignal.timeout(6000) }
+      );
+      if (!r.ok) return null;
+      const d = await r.json();
+      if (!d.releases?.length) return null;
+      const rel    = d.releases[0];
+      const artist = rel['artist-credit']?.[0]?.artist?.name || '';
+      const label  = rel['label-info']?.[0]?.label?.name    || '';
+      const format = rel.media?.[0]?.format || rel.packaging || 'CD';
+      // Cover Art Archive — misma org que MusicBrainz, acceso libre
+      const cover  = rel.id ? `https://coverartarchive.org/release/${rel.id}/front-250` : '';
+      return {
+        name:      rel.title + (artist ? ` — ${artist}` : ''),
+        category:  'music',
+        year:      (rel.date || '').slice(0, 4),
+        platform:  format,
+        publisher: label,
+        genre:     '',
+        cover,
+        barcode:   c,
+        confidence: 'high'
+      };
+    },
+
+    // ── UPC Item DB — productos generales ────────────────────────────────
+    // Plan gratuito: 100 peticiones/día.
     async (c) => {
       const r = await fetch('https://api.upcitemdb.com/prod/trial/lookup?upc=' + c, { signal: AbortSignal.timeout(5000) });
       const d = await r.json();
@@ -803,7 +842,38 @@ async function lookupBarcode(code) {
         year: '', platform: guessPlatform(item.title, item.brand), publisher: item.brand || '',
         genre: item.category || '', desc: item.description || '', cover: item.images?.[0] || '',
         barcode: c, confidence: 'medium' };
+    },
+
+    // ── Wikidata SPARQL — último recurso, cobertura muy amplia ───────────
+    // Gratuito, sin clave. Puede ser lento (2-5 s). Cubre productos que
+    // otros no tienen: figuras, juguetes, ediciones especiales, etc.
+    async (c) => {
+      const q = `SELECT ?item ?name ?img WHERE {
+        { ?item wdt:P3962 "${c}" } UNION { ?item wdt:P5567 "${c}" }
+        ?item rdfs:label ?name FILTER(LANG(?name) IN ("es","en"))
+        OPTIONAL { ?item wdt:P18 ?img }
+      } LIMIT 1`;
+      const r = await fetch(
+        `https://query.wikidata.org/sparql?format=json&query=${encodeURIComponent(q)}`,
+        { signal: AbortSignal.timeout(9000) }
+      );
+      if (!r.ok) return null;
+      const d = await r.json();
+      const b = d.results?.bindings?.[0];
+      if (!b?.name?.value || /^Q\d+$/.test(b.name.value)) return null;
+      return {
+        name:      b.name.value,
+        category:  guessCategory(b.name.value, ''),
+        year:      '',
+        platform:  '',
+        publisher: '',
+        genre:     '',
+        cover:     b.img?.value || '',
+        barcode:   c,
+        confidence: 'medium'
+      };
     }
+
   ];
   for (const api of apis) { try { const result = await api(code); if (result?.name) return result; } catch(e) {} }
   return null;
@@ -1084,13 +1154,15 @@ function isWesternText(str) {
 // =============================================
 
 async function searchAllAPIs(title, allLines = []) {
-  const [booksR, tmdbR, anilistR] = await Promise.allSettled([
+  const [booksR, tmdbR, anilistR, tvmazeR, olR] = await Promise.allSettled([
     searchGoogleBooks(title),
     searchTMDB(title),
     searchAniList(title),
+    searchTVmaze(title),
+    searchOpenLibraryTitle(title),
   ]);
   const results = [];
-  [booksR, tmdbR, anilistR].forEach(r => {
+  [booksR, tmdbR, anilistR, tvmazeR, olR].forEach(r => {
     if (r.status === 'fulfilled' && r.value?.name) results.push(r.value);
   });
   return results.slice(0, 5);
@@ -1157,6 +1229,69 @@ async function searchTMDB(query) {
   } catch(e) { return null; }
 }
 
+// TVmaze — series de TV. Sin key. CORS OK.
+async function searchTVmaze(query) {
+  try {
+    const r = await fetch(
+      `https://api.tvmaze.com/search/shows?q=${encodeURIComponent(query)}`,
+      { signal: AbortSignal.timeout(6000) }
+    );
+    if (!r.ok) return null;
+    const d = await r.json();
+    if (!d?.length) return null;
+    const show = d[0].show;
+    if (!show?.name) return null;
+    return {
+      name:      show.name,
+      category:  'movie',
+      year:      (show.premiered || '').slice(0, 4),
+      publisher: show.network?.name || show.webChannel?.name || '',
+      platform:  '',
+      genre:     (show.genres || []).slice(0, 2).join(', '),
+      desc:      show.summary ? show.summary.replace(/<[^>]+>/g, '').slice(0, 280) : '',
+      cover:     show.image?.medium || show.image?.original || '',
+      barcode:   '',
+      confidence: 'medium',
+      source:    'tvmaze'
+    };
+  } catch(e) { return null; }
+}
+
+// Open Library — búsqueda por título. Sin key. CORS OK.
+async function searchOpenLibraryTitle(query) {
+  try {
+    const r = await fetch(
+      `https://openlibrary.org/search.json?q=${encodeURIComponent(query)}&limit=3&fields=title,author_name,first_publish_year,publisher,subject,isbn,cover_i`,
+      { signal: AbortSignal.timeout(7000) }
+    );
+    if (!r.ok) return null;
+    const d   = await r.json();
+    const doc = d.docs?.[0];
+    if (!doc?.title) return null;
+    const isbn  = doc.isbn?.[0] || '';
+    const cover = doc.cover_i
+      ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg`
+      : (isbn ? `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg` : '');
+    const subjects = (doc.subject || []).join(' ').toLowerCase();
+    let category = 'book';
+    if (/manga/i.test(subjects) || /manga/i.test(doc.title)) category = 'manga';
+    else if (/comic|graphic.novel/i.test(subjects))          category = 'comic';
+    return {
+      name:      doc.title,
+      category,
+      year:      String(doc.first_publish_year || ''),
+      publisher: (doc.author_name || []).slice(0, 2).join(', ') || (doc.publisher || []).slice(0, 1).join(', '),
+      platform:  '',
+      genre:     (doc.subject || []).slice(0, 2).join(', '),
+      desc:      '',
+      cover,
+      barcode:   isbn,
+      confidence: 'medium',
+      source:    'openlibrary'
+    };
+  } catch(e) { return null; }
+}
+
 // AniList — manga y anime. Sin key. CORS OK.
 async function searchAniList(query) {
   try {
@@ -1205,7 +1340,7 @@ function showSearchResults(results, statusId, searchTitle) {
   window._searchResults = results;
   const slot = document.getElementById('search-results-slot');
   if (!slot) return;
-  const sourceNames = { 'google-books': 'Google Books', tmdb: 'TMDB', anilist: 'AniList' };
+  const sourceNames = { 'google-books': 'Google Books', tmdb: 'TMDB', anilist: 'AniList', tvmaze: 'TVmaze', openlibrary: 'Open Library' };
   slot.innerHTML = `<div class="search-results">
     <div class="search-results-header">
       <i class="ti ti-list-search"></i>
