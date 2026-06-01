@@ -143,6 +143,8 @@ window.toggleExtraFields = () => {
 const LS_KEY = 'collectr_db_v2';
 const AUTO_BACKUP_KEY  = 'collectr_auto_bk';
 const BACKUP_META_KEY  = 'collectr_auto_bk_meta';
+const APP_VERSION      = '1.0.3';           // ← actualizar en cada release
+const UPDATE_CHECK_KEY = 'collectr_upd_chk'; // timestamp del último chequeo
 
 // ── BD comunitaria ────────────────────────────────────────────────────────────
 const GLOBAL_DB_COL   = 'productos_globales';
@@ -1855,6 +1857,81 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+// ===== COMPROBACIÓN DE ACTUALIZACIONES (web / PWA / Android) =====
+// En Electron el proceso principal gestiona las actualizaciones con un
+// diálogo nativo — aquí solo actuamos en contexto de navegador/PWA.
+
+function semverGt(a, b) {
+  const pa = a.split('.').map(Number);
+  const pb = b.split('.').map(Number);
+  for (let i = 0; i < 3; i++) {
+    if ((pa[i] || 0) > (pb[i] || 0)) return true;
+    if ((pa[i] || 0) < (pb[i] || 0)) return false;
+  }
+  return false;
+}
+
+async function checkForUpdates() {
+  // Electron tiene su propio check nativo — evitar duplicado
+  if (/electron/i.test(navigator.userAgent)) return;
+
+  // Rate limit: solo una comprobación cada 24 h
+  const last = parseInt(localStorage.getItem(UPDATE_CHECK_KEY) || '0');
+  if (Date.now() - last < 86_400_000) return;
+  localStorage.setItem(UPDATE_CHECK_KEY, String(Date.now()));
+
+  try {
+    const r = await fetch(
+      'https://api.github.com/repos/JFSAINTS/collectr/releases/latest',
+      { signal: AbortSignal.timeout(8000) }
+    );
+    if (!r.ok) return;
+    const rel    = await r.json();
+    const latest = (rel.tag_name || '').replace(/^v/, '');
+    if (!latest || !semverGt(latest, APP_VERSION)) return;
+
+    // Elegir el asset correcto según plataforma
+    const isAndroid = /android/i.test(navigator.userAgent);
+    const assetName = isAndroid
+      ? 'Collectr-android.apk'
+      : `Collectr-${latest}-setup.exe`;
+    const asset = rel.assets?.find(a => a.name === assetName);
+    const url   = asset?.browser_download_url || rel.html_url;
+
+    showUpdateBanner(latest, url, rel.html_url);
+  } catch(e) {}
+}
+
+function showUpdateBanner(version, downloadUrl, releasesUrl) {
+  if (document.getElementById('update-banner')) return;
+  const div = document.createElement('div');
+  div.id        = 'update-banner';
+  div.className = 'update-banner';
+  div.innerHTML = `
+    <div class="update-banner-body">
+      <i class="ti ti-refresh-alert"></i>
+      <span>Nueva versión disponible: <strong>v${esc(version)}</strong></span>
+    </div>
+    <div class="update-banner-actions">
+      <a href="${esc(downloadUrl)}" target="_blank" rel="noopener"
+         class="btn btn-primary btn-sm update-dl-btn"
+         onclick="document.getElementById('update-banner').remove()">
+        <i class="ti ti-download"></i> Actualizar
+      </a>
+      <a href="${esc(releasesUrl)}" target="_blank" rel="noopener"
+         class="btn btn-ghost btn-sm"
+         onclick="document.getElementById('update-banner').remove()">
+        Novedades
+      </a>
+      <button class="btn-icon update-dismiss"
+              onclick="document.getElementById('update-banner').remove()"
+              title="Cerrar">
+        <i class="ti ti-x"></i>
+      </button>
+    </div>`;
+  document.body.appendChild(div);
+}
+
 // ===== ONLINE/OFFLINE =====
 window.addEventListener('online', () => {
   if (!isGuest && isFirebaseConfigured) {
@@ -1875,3 +1952,6 @@ setInterval(saveAutoBackup, 5 * 60 * 1000);
 
 // Arranque directo en modo local — todas las asignaciones window.X ya están listas
 signInAsGuest();
+
+// Comprobar actualizaciones 5 s después de arrancar (no bloquea la UI)
+setTimeout(checkForUpdates, 5000);

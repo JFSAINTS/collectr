@@ -569,6 +569,31 @@ select option { background: var(--bg2); color: var(--text); }
 .detection-confidence { font-size: 0.65rem; color: var(--accent3); background: rgba(124,106,247,0.12); padding: 1px 7px; border-radius: 20px; font-weight: 600; }
 .detection-check { color: var(--success); font-size: 1.1rem; flex-shrink: 0; }
 
+/* ── Banner de actualización disponible ──────────────────────────────────── */
+.update-banner {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 9999;
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 10px;
+  padding: 12px 16px;
+  background: linear-gradient(90deg, #1a1a2e, #16213e);
+  border-top: 2px solid var(--accent);
+  box-shadow: 0 -4px 24px rgba(124,106,247,0.25);
+  animation: slideUp 0.35s ease;
+}
+@keyframes slideUp { from { transform: translateY(100%); opacity: 0; } }
+.update-banner-body {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 0.875rem; color: var(--text);
+}
+.update-banner-body .ti { color: var(--accent2); font-size: 1.1rem; flex-shrink: 0; }
+.update-banner-body strong { color: var(--accent3); }
+.update-banner-actions {
+  display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+}
+.update-dl-btn { background: var(--accent) !important; }
+.update-dismiss { color: var(--text3); }
+.update-dismiss:hover { color: var(--text); }
+
 /* Duplicado — banner de aviso "ya tienes este ítem" */
 .detection-banner--duplicate {
   background: linear-gradient(135deg, rgba(245,158,11,0.10), rgba(245,158,11,0.04));
