@@ -238,6 +238,60 @@ git -C D:\CATALOGA push origin main
 
 ---
 
+## Checklist de release
+
+Pasos obligatorios cada vez que se publica una nueva versión:
+
+1. **Actualizar `APP_VERSION` en `app.js`**
+   ```js
+   const APP_VERSION = 'X.Y.Z';  // ← línea ~147, cambiar al nuevo número
+   ```
+   Sin este cambio los usuarios existentes NO recibirán el aviso de actualización.
+
+2. **Actualizar versión en `package.json`**
+   ```json
+   "version": "X.Y.Z"
+   ```
+
+3. **Actualizar links de descarga en `README.md`** (sección Descargas).
+
+4. **Bump del script en `index.html`**
+   ```html
+   <script type="module" src="app.js?v=N">
+   ```
+
+5. **Compilar binarios**
+   ```powershell
+   # Windows x64
+   $env:PATH = "C:\Users\jfsai\nodejs;" + $env:PATH
+   $env:ELECTRON_BUILDER_CACHE = "D:\electron-builder-cache"
+   Set-Location D:\CATALOGA
+   & "C:\Users\jfsai\nodejs\npm.cmd" run build:win
+
+   # Android APK (solo si hay cambios de icono/manifest)
+   $env:JAVA_HOME = "C:\Program Files\Microsoft\jdk-21.0.11.10-hotspot"
+   $env:ANDROID_HOME = $env:LOCALAPPDATA + "\Android\Sdk"
+   Set-Location "D:\CATALOGA\android-twa"
+   .\gradlew.bat assembleRelease
+   Copy-Item "app\build\outputs\apk\release\app-release.apk" "..\dist\Collectr-android.apk" -Force
+   ```
+
+6. **Commit, push y crear release en GitHub**
+   ```powershell
+   git -C D:\CATALOGA add -u
+   git -C D:\CATALOGA commit -m "chore: release vX.Y.Z"
+   git -C D:\CATALOGA push origin main
+   # Crear release via REST API (ver comandos de sesiones anteriores)
+   ```
+
+7. **Subir assets a la release** (portable.exe + setup.exe + android.apk)
+
+> **Nota:** El Android APK (TWA) carga contenido web en vivo desde GitHub Pages,
+> por lo que los cambios en app.js/styles.css no requieren recompilar el APK.
+> Solo recompilar si cambian iconos, manifest.json o la URL base.
+
+---
+
 ## Pendiente / Próximas mejoras sugeridas
 
 - [x] **Motor de reconocimiento de portadas** — Google Cloud Vision WEB_DETECTION (como Google Lens). Requiere activar la API en Google Cloud Console.
@@ -250,6 +304,38 @@ git -C D:\CATALOGA push origin main
 - [ ] **CORS en Claude API** — las llamadas directas desde el browser fallarán en producción sin un proxy backend.
 
 ---
+
+## Cambios sesión 2026-06-01 (v1.0.3)
+
+### Comprobación de actualizaciones
+- **`electron-main.js`**: `checkForUpdates(win)` via `https` nativo de Node.js, sin dependencias extra. Llama a la GitHub Releases API 4 s después de cargar. Si hay versión nueva, muestra diálogo nativo del SO con botón "Descargar ahora" que abre el installer `.exe` via `shell.openExternal()`.
+- **`app.js`**: `checkForUpdates()` via `fetch` (solo en navegador, omite si `userAgent` contiene "Electron"). Rate limit 24 h via `UPDATE_CHECK_KEY` en localStorage. `showUpdateBanner()` crea un banner fijo en la parte inferior con botón "Actualizar" (descarga el asset correcto: `.exe` en escritorio, `.apk` en Android) y botón "Novedades". Se lanza con `setTimeout(..., 5000)` al arrancar.
+- **`APP_VERSION = '1.0.3'`** — constante en `app.js` que **debe actualizarse en cada release** (ver checklist arriba).
+- **`styles.css`**: `.update-banner` con animación `slideUp`, gradiente oscuro y borde superior en acento.
+- Script v10.
+
+### Aviso de duplicado al escanear
+- `identifyByBarcode()` ahora tiene paso 0: busca el barcode en `DB[]` local antes de tocar la red (0 coste). Si existe, devuelve los datos con `fromLocalDB:true` y resetea notas/estado.
+- `fillResultForm()`: banner amarillo `.detection-banner--duplicate` con badge "Ya en tu colección / En tu lista de deseos" y nota "Revisa los datos y pulsa Guardar para añadir otra copia."
+
+### Nuevas fuentes de búsqueda (todas sin clave ni cuenta)
+- **MusicBrainz** en `lookupBarcode()`: lookup directo por EAN/UPC → música física. Portada via Cover Art Archive (`coverartarchive.org/release/{mbid}/front-250`).
+- **Wikidata SPARQL** en `lookupBarcode()`: último recurso, cobertura muy amplia (P3962 + P5567). Cubre figuras, juguetes, ediciones especiales.
+- **TVmaze** en `searchAllAPIs()`: series de TV por título. Sin clave.
+- **Open Library por título** (`searchOpenLibraryTitle`) en `searchAllAPIs()`: suplementa Google Books.
+- Open Library mejorado: portada con fallback a `covers.openlibrary.org/b/isbn/{c}-L.jpg`.
+- `sourceNames` actualizado en el selector de resultados (`tvmaze`, `openlibrary`).
+
+### Orden de búsqueda definitivo
+```
+0. Colección local DB[] (0 coste, sin red)
+1. BD comunitaria Firestore (1 lectura)
+2. Google Books / Open Library (ISBN)
+3. MusicBrainz (música física EAN)
+4. UPC Item DB (productos generales, 100/día)
+5. Wikidata SPARQL (último recurso)
+6. TMDB + Google Vision + TVmaze + AniList (por foto/título)
+```
 
 ## Cambios sesión 2026-05-29 (v1.0.2)
 
